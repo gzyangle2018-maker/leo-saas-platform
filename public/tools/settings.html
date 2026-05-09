@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - 系统设置</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="/js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1); color: #2563eb; border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .setting-row { transition: all 0.15s; }
+    .setting-row:hover { background: #f8fafc; }
+    .toggle { width: 44px; height: 24px; background: #e5e7eb; border-radius: 12px; position: relative; cursor: pointer; transition: all 0.2s; }
+    .toggle.on { background: #3b82f6; }
+    .toggle::after { content: ''; position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .toggle.on::after { left: 22px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center"><i class="fas fa-cube text-white text-sm"></i></div>
+        <div><h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1><p class="text-xs text-gray-500">Operations Hub</p></div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    </div>
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-book w-5 text-center"></i><span>知识库</span></a>
+      <a href="asin-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-barcode w-5 text-center"></i><span>ASIN工作台</span></a>
+      <a href="task-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-tasks w-5 text-center"></i><span>任务中心</span><span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-robot w-5 text-center"></i><span>Agent工作台</span><span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-check-circle w-5 text-center"></i><span>审批中心</span><span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-exclamation-triangle w-5 text-center"></i><span>异常中心</span><span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-history w-5 text-center"></i><span>复盘中心</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-cog w-5 text-center"></i><span>系统设置</span></a>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-lg"></i></button>
+          <h2 class="text-lg font-semibold text-gray-800">系统设置</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><i class="fas fa-bell"></i><span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span></button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm:block"><p class="text-sm font-medium text-gray-800">运营管理员</p><p class="text-xs text-gray-500">admin@amazon.com</p></div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">A</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6 max-w-4xl">
+      <!-- General Settings -->
+      <div class="bg-white rounded-xl border border-gray-200 mb-6 card-hover">
+        <div class="p-5 border-b border-gray-100">
+          <h4 class="font-semibold text-gray-800 flex items-center gap-2"><i class="fas fa-sliders-h text-blue-600"></i>通用设置</h4>
+        </div>
+        <div class="divide-y divide-gray-100">
+          <div class="setting-row flex items-center justify-between p-5">
+            <div>
+              <p class="text-sm font-medium text-gray-800">自动同步数据</p>
+              <p class="text-xs text-gray-500 mt-0.5">每小时自动从卖家后台同步数据</p>
+            </div>
+            <div class="toggle on" id="toggleAutoSync" onclick="toggleSetting('autoSync')"></div>
+          </div>
+          <div class="setting-row flex items-center justify-between p-5">
+            <div>
+              <p class="text-sm font-medium text-gray-800">异常自动检测</p>
+              <p class="text-xs text-gray-500 mt-0.5">自动识别ACoS、库存等异常并报警</p>
+            </div>
+            <div class="toggle on" id="toggleAutoDetect" onclick="toggleSetting('autoDetect')"></div>
+          </div>
+          <div class="setting-row flex items-center justify-between p-5">
+            <div>
+              <p class="text-sm font-medium text-gray-800">通知推送</p>
+              <p class="text-xs text-gray-500 mt-0.5">任务截止、异常发生等事件推送</p>
+            </div>
+            <div class="toggle on" id="toggleNotify" onclick="toggleSetting('notify')"></div>
+          </div>
+          <div class="setting-row flex items-center justify-between p-5">
+            <div>
+              <p class="text-sm font-medium text-gray-800">深色模式</p>
+              <p class="text-xs text-gray-500 mt-0.5">切换系统深色主题（开发中）</p>
+            </div>
+            <div class="toggle" id="toggleDarkMode" onclick="toggleSetting('darkMode')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM Configuration -->
+      <div class="bg-white rounded-xl border border-gray-200 mb-6 card-hover">
+        <div class="p-5 border-b border-gray-100">
+          <h4 class="font-semibold text-gray-800 flex items-center gap-2"><i class="fas fa-brain text-purple-600"></i>LLM 配置 <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">预留</span></h4>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-info-circle text-yellow-600 mt-0.5"></i>
+              <div>
+                <p class="text-sm text-yellow-800 font-medium">LLM 功能尚未配置</p>
+                <p class="text-xs text-yellow-700 mt-1">配置API密钥后，Agent工作台将可以调用大语言模型进行智能分析。</p>
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">API 提供商</label>
+              <select id="llmProvider" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">请选择</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic (Claude)</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">模型</label>
+              <select id="llmModel" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">请选择提供商</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+            <div class="relative">
+              <input type="password" id="llmKey" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="sk-...">
+              <button onclick="toggleKeyVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i class="fas fa-eye" id="keyEye"></i></button>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">API Base URL (可选)</label>
+            <input type="text" id="llmBase" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="https://api.openai.com/v1">
+          </div>
+          <div class="flex items-center justify-between pt-2">
+            <button onclick="testLLM()" class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm hover:bg-purple-200"><i class="fas fa-vial mr-2"></i>测试连接</button>
+            <button onclick="saveLLM()" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">保存配置</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MCP Configuration -->
+      <div class="bg-white rounded-xl border border-gray-200 mb-6 card-hover">
+        <div class="p-5 border-b border-gray-100">
+          <h4 class="font-semibold text-gray-800 flex items-center gap-2"><i class="fas fa-plug text-green-600"></i>MCP 服务配置 <span class="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">预留</span></h4>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+              <div>
+                <p class="text-sm text-blue-800 font-medium">MCP (Model Context Protocol)</p>
+                <p class="text-xs text-blue-700 mt-1">配置MCP服务以连接外部数据源和工具，扩展Agent能力。</p>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-database text-blue-600 text-sm"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">数据库 MCP</p><p class="text-xs text-gray-500">连接运营数据库</p></div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400">未连接</span>
+                <button onclick="configureMcp('db')" class="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-100">配置</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-file-excel text-green-600 text-sm"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">报表 MCP</p><p class="text-xs text-gray-500">自动生成运营报表</p></div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400">未连接</span>
+                <button onclick="configureMcp('report')" class="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-100">配置</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center"><i class="fas fa-globe text-orange-600 text-sm"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">浏览器 MCP</p><p class="text-xs text-gray-500">自动化浏览器操作</p></div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-gray-400">未连接</span>
+                <button onclick="configureMcp('browser')" class="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs hover:bg-gray-100">配置</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Management -->
+      <div class="bg-white rounded-xl border border-gray-200 mb-6 card-hover">
+        <div class="p-5 border-b border-gray-100">
+          <h4 class="font-semibold text-gray-800 flex items-center gap-2"><i class="fas fa-database text-red-600"></i>数据管理</h4>
+        </div>
+        <div class="p-5 space-y-4">
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p class="text-sm font-medium text-gray-800">导出所有数据</p>
+              <p class="text-xs text-gray-500 mt-0.5">将本地存储的所有数据导出为JSON文件</p>
+            </div>
+            <button onclick="exportData()" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-100"><i class="fas fa-download mr-2"></i>导出</button>
+          </div>
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p class="text-sm font-medium text-gray-800">导入数据</p>
+              <p class="text-xs text-gray-500 mt-0.5">从JSON文件导入数据</p>
+            </div>
+            <label class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-100 cursor-pointer">
+              <i class="fas fa-upload mr-2"></i>导入<input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(this)">
+            </label>
+          </div>
+          <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-100">
+            <div>
+              <p class="text-sm font-medium text-red-700">清除所有数据</p>
+              <p class="text-xs text-red-500 mt-0.5">此操作不可撤销，将删除所有本地数据</p>
+            </div>
+            <button onclick="clearAllData()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">清除</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="bg-white rounded-xl border border-gray-200 card-hover">
+        <div class="p-5 border-b border-gray-100">
+          <h4 class="font-semibold text-gray-800 flex items-center gap-2"><i class="fas fa-info-circle text-gray-600"></i>关于</h4>
+        </div>
+        <div class="p-5">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center"><i class="fas fa-cube text-white text-xl"></i></div>
+            <div>
+              <p class="font-semibold text-gray-800">Amazon运营中台</p>
+              <p class="text-xs text-gray-500">版本 1.0.0</p>
+            </div>
+          </div>
+          <p class="text-sm text-gray-600">一站式Amazon运营管理平台，集成ASIN管理、任务中心、知识库、智能Agent、审批流程、异常监控和复盘中心。</p>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <script>
+    requireAuth();
+
+    // ===================== STATE =====================
+    let settings = {};
+    const defaults = { autoSync: true, autoDetect: true, notify: true, darkMode: false };
+
+    const modelsByProvider = {
+      openai: [{v:'gpt-4o',l:'GPT-4o'},{v:'gpt-4o-mini',l:'GPT-4o Mini'},{v:'gpt-4-turbo',l:'GPT-4 Turbo'}],
+      anthropic: [{v:'claude-3-5-sonnet',l:'Claude 3.5 Sonnet'},{v:'claude-3-opus',l:'Claude 3 Opus'},{v:'claude-3-haiku',l:'Claude 3 Haiku'}],
+      deepseek: [{v:'deepseek-chat',l:'DeepSeek Chat'},{v:'deepseek-coder',l:'DeepSeek Coder'}],
+      custom: [{v:'custom',l:'自定义模型'}]
+    };
+
+    function mapApiToSettings(api) {
+      if (!api || typeof api !== 'object') return { ...defaults };
+      return {
+        autoSync: api.auto_sync !== undefined ? api.auto_sync : defaults.autoSync,
+        autoDetect: api.auto_detect !== undefined ? api.auto_detect : defaults.autoDetect,
+        notify: api.notify !== undefined ? api.notify : defaults.notify,
+        darkMode: api.dark_mode !== undefined ? api.dark_mode : defaults.darkMode,
+        llm: {
+          provider: api.llm_provider || '',
+          model: api.llm_model || '',
+          key: api.llm_key || '',
+          base: api.llm_base || ''
+        }
+      };
+    }
+
+    function mapSettingsToApi(s) {
+      return {
+        auto_sync: !!s.autoSync,
+        auto_detect: !!s.autoDetect,
+        notify: !!s.notify,
+        dark_mode: !!s.darkMode,
+        llm_provider: (s.llm && s.llm.provider) || '',
+        llm_model: (s.llm && s.llm.model) || '',
+        llm_key: (s.llm && s.llm.key) || '',
+        llm_base: (s.llm && s.llm.base) || ''
+      };
+    }
+
+    async function loadSettings() {
+      try {
+        const apiSettings = await OpsAPI.getSettings();
+        settings = mapApiToSettings(apiSettings);
+      } catch (e) {
+        console.error('加载设置失败', e);
+        settings = { ...defaults };
+      }
+    }
+
+    async function saveSettings() {
+      try {
+        await OpsAPI.saveSettings(mapSettingsToApi(settings));
+      } catch (e) {
+        alert('保存设置失败: ' + e.message);
+      }
+    }
+
+    // ===================== RENDER =====================
+    function renderSettings() {
+      Object.keys(defaults).forEach(key => {
+        const el = document.getElementById('toggle'+key.charAt(0).toUpperCase()+key.slice(1));
+        if(el) el.classList.toggle('on', settings[key]);
+      });
+      const llm = settings.llm || {};
+      document.getElementById('llmProvider').value = llm.provider || '';
+      updateModelOptions();
+      document.getElementById('llmModel').value = llm.model || '';
+      document.getElementById('llmKey').value = llm.key || '';
+      document.getElementById('llmBase').value = llm.base || '';
+    }
+
+    function updateModelOptions() {
+      const provider = document.getElementById('llmProvider').value;
+      const sel = document.getElementById('llmModel');
+      const models = modelsByProvider[provider] || [];
+      sel.innerHTML = models.length
+        ? '<option value="">请选择模型</option>' + models.map(m=>`<option value="${m.v}">${m.l}</option>`).join('')
+        : '<option value="">请选择提供商</option>';
+    }
+
+    // ===================== ACTIONS =====================
+    async function toggleSetting(key) {
+      settings[key] = !settings[key];
+      await saveSettings(); renderSettings();
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('llmKey');
+      const icon = document.getElementById('keyEye');
+      input.type = input.type==='password'?'text':'password';
+      icon.className = input.type==='password'?'fas fa-eye':'fas fa-eye-slash';
+    }
+
+    async function saveLLM() {
+      settings.llm = {
+        provider: document.getElementById('llmProvider').value,
+        model: document.getElementById('llmModel').value,
+        key: document.getElementById('llmKey').value,
+        base: document.getElementById('llmBase').value
+      };
+      await saveSettings(); alert('LLM配置已保存');
+    }
+
+    function testLLM() {
+      const provider = document.getElementById('llmProvider').value;
+      const key = document.getElementById('llmKey').value;
+      if (!provider || !key) { alert('请先填写提供商和API Key'); return; }
+      alert('测试中...（当前为演示环境，未实际调用API）');
+    }
+
+    function configureMcp(type) { alert(`MCP ${type} 配置功能开发中...`); }
+
+    function exportData() { alert('功能已迁移至云端'); }
+    function importData(input) { alert('功能已迁移至云端'); input.value = ''; }
+    function clearAllData() { alert('功能已迁移至云端'); }
+
+    document.getElementById('llmProvider')?.addEventListener('change', updateModelOptions);
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('sidebarToggle')?.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+      document.addEventListener('click', e => { if (window.innerWidth<1024 && !sidebar.contains(e.target) && !document.getElementById('mobileMenuBtn')?.contains(e.target)) sidebar.classList.add('-translate-x-full'); });
+      if (window.innerWidth<1024) sidebar.classList.add('-translate-x-full');
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSettings();
+      renderSettings(); initSidebar(); updateBadges();
+    });
+  </script>
+</body>
+</html>
