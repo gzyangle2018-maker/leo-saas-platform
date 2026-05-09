@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - 任务中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1); color: #2563eb; border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .task-card { transition: all 0.2s; border-left: 3px solid transparent; }
+    .task-card:hover { background: #f8fafc; }
+    .task-card.high { border-left-color: #ef4444; }
+    .task-card.medium { border-left-color: #f97316; }
+    .task-card.low { border-left-color: #22c55e; }
+    .kanban-col { min-height: 300px; }
+    .kanban-card { cursor: grab; }
+    .kanban-card:active { cursor: grabbing; }
+    .tab-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+  </style>
+  <script src="/js/api.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center"><i class="fas fa-cube text-white text-sm"></i></div>
+        <div><h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1><p class="text-xs text-gray-500">Operations Hub</p></div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    </div>
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-book w-5 text-center"></i><span>知识库</span></a>
+      <a href="asin-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-barcode w-5 text-center"></i><span>ASIN工作台</span></a>
+      <a href="task-hub.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-tasks w-5 text-center"></i><span>任务中心</span><span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-robot w-5 text-center"></i><span>Agent工作台</span><span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-check-circle w-5 text-center"></i><span>审批中心</span><span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-exclamation-triangle w-5 text-center"></i><span>异常中心</span><span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-history w-5 text-center"></i><span>复盘中心</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-cog w-5 text-center"></i><span>系统设置</span></a>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-lg"></i></button>
+          <h2 class="text-lg font-semibold text-gray-800">任务中心</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden md:block">
+            <input type="text" id="globalSearch" placeholder="搜索任务..." class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><i class="fas fa-bell"></i><span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span></button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm-block"><p class="text-sm font-medium text-gray-800">运营管理员</p><p class="text-xs text-gray-500">admin@amazon.com</p></div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">A</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <!-- Toolbar -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input type="text" id="taskSearch" placeholder="搜索任务..." class="w-72 pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          </div>
+          <select id="priorityFilter" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">全部优先级</option><option value="high">高优先级</option><option value="medium">中优先级</option><option value="low">低优先级</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="flex bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <button id="viewList" onclick="setView('list')" class="tab-btn active px-4 py-2 text-sm font-medium"><i class="fas fa-list mr-1"></i>列表</button>
+            <button id="viewKanban" onclick="setView('kanban')" class="tab-btn px-4 py-2 text-sm font-medium"><i class="fas fa-columns mr-1"></i>看板</button>
+          </div>
+          <button onclick="openModal('taskModal')" class="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700"><i class="fas fa-plus mr-2"></i>新建任务</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">待处理</p>
+          <h4 class="text-xl font-bold text-gray-800" id="statPending">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">进行中</p>
+          <h4 class="text-xl font-bold text-blue-600" id="statInProgress">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">已完成</p>
+          <h4 class="text-xl font-bold text-green-600" id="statCompleted">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">今日截止</p>
+          <h4 class="text-xl font-bold text-orange-600" id="statDueToday">0</h4>
+        </div>
+      </div>
+
+      <!-- List View -->
+      <div id="listView" class="bg-white rounded-xl border border-gray-200 overflow-hidden card-hover">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-gray-600 w-8"><input type="checkbox" id="selectAll" class="rounded"></th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">任务</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">关联ASIN</th>
+              <th class="px-4 py-3 text-center font-medium text-gray-600">优先级</th>
+              <th class="px-4 py-3 text-center font-medium text-gray-600">状态</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">截止日</th>
+              <th class="px-4 py-3 text-center font-medium text-gray-600">操作</th>
+            </tr>
+          </thead>
+          <tbody id="taskTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Kanban View -->
+      <div id="kanbanView" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-gray-100 rounded-xl p-4 kanban-col">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-medium text-gray-700 text-sm">待处理</h4>
+            <span class="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full" id="kanbanPendingCount">0</span>
+          </div>
+          <div id="kanbanPending" class="space-y-3"></div>
+        </div>
+        <div class="bg-blue-50 rounded-xl p-4 kanban-col">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-medium text-blue-700 text-sm">进行中</h4>
+            <span class="bg-blue-100 text-blue-600 text-xs px-2 py-0.5 rounded-full" id="kanbanInProgressCount">0</span>
+          </div>
+          <div id="kanbanInProgress" class="space-y-3"></div>
+        </div>
+        <div class="bg-green-50 rounded-xl p-4 kanban-col">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-medium text-green-700 text-sm">已完成</h4>
+            <span class="bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded-full" id="kanbanCompletedCount">0</span>
+          </div>
+          <div id="kanbanCompleted" class="space-y-3"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <!-- New Task Modal -->
+  <div id="taskModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-lg mx-4">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-800">新建任务</h3>
+        <button onclick="closeModal('taskModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">任务标题</label>
+          <input type="text" id="newTaskTitle" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入任务标题">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+            <select id="newTaskPriority" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="high">高</option><option value="medium" selected>中</option><option value="low">低</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">截止日期</label>
+            <input type="date" id="newTaskDue" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">关联ASIN (可选)</label>
+          <input type="text" id="newTaskAsin" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" placeholder="B08XXXXXXX">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">任务描述</label>
+          <textarea id="newTaskDesc" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="输入任务描述..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+        <button onclick="closeModal('taskModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+        <button onclick="saveTask()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">创建任务</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    requireAuth();
+    let tasks = [];
+    let currentView = 'list';
+
+    async function loadData() {
+      try {
+        const res = await OpsAPI.list('tasks');
+        tasks = (res.data || []).map(t => ({
+          ...t,
+          desc: t.desc || t.description,
+          dueDate: t.dueDate || t.due_date
+        }));
+        renderAll();
+      } catch (e) {
+        console.error('Failed to load tasks', e);
+      }
+    }
+
+    const priorityMap = { high: { label: '高', class: 'bg-red-100 text-red-700' }, medium: { label: '中', class: 'bg-orange-100 text-orange-700' }, low: { label: '低', class: 'bg-green-100 text-green-700' } };
+    const statusMap = { pending: { label: '待处理', class: 'bg-gray-100 text-gray-700' }, in_progress: { label: '进行中', class: 'bg-blue-100 text-blue-700' }, completed: { label: '已完成', class: 'bg-green-100 text-green-700' } };
+
+    // ===================== RENDER =====================
+    function renderAll() {
+      const search = document.getElementById('taskSearch')?.value.toLowerCase() || '';
+      const pFilter = document.getElementById('priorityFilter')?.value || 'all';
+      let filtered = tasks.filter(t => {
+        const matchSearch = !search || (t.title+t.asin+t.desc||'').toLowerCase().includes(search);
+        const matchP = pFilter === 'all' || t.priority === pFilter;
+        return matchSearch && matchP;
+      });
+      renderList(filtered); renderKanban(filtered); updateStats(filtered);
+    }
+
+    function renderList(filtered) {
+      const tbody = document.getElementById('taskTableBody');
+      if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-8">暂无任务</td></tr>'; return; }
+      tbody.innerHTML = filtered.map(t => {
+        const p = priorityMap[t.priority] || priorityMap.medium;
+        const s = statusMap[t.status] || statusMap.pending;
+        const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('zh-CN') : '未设置';
+        const overdue = t.dueDate && t.status !== 'completed' && new Date(t.dueDate) < new Date();
+        return `
+          <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="px-4 py-3"><input type="checkbox" class="task-checkbox rounded" data-id="${t.id}"></td>
+            <td class="px-4 py-3"><p class="text-sm font-medium text-gray-800">${t.title}</p><p class="text-xs text-gray-500 truncate max-w-[150px]">${t.desc||''}</p></td>
+            <td class="px-4 py-3"><span class="font-mono text-xs text-blue-600">${t.asin||'-'}</span></td>
+            <td class="px-4 py-3 text-center"><span class="text-xs px-2 py-1 rounded ${p.class}">${p.label}</span></td>
+            <td class="px-4 py-3 text-center"><span class="text-xs px-2 py-1 rounded ${s.class}">${s.label}</span></td>
+            <td class="px-4 py-3 text-sm ${overdue?'text-red-600 font-medium':''}">${overdue?'⚠️ ':''}${due}</td>
+            <td class="px-4 py-3 text-center">
+              ${t.status !== 'completed' ? `<button onclick="progressTask(${t.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded mr-1" title="推进"><i class="fas fa-play"></i></button>` : ''}
+              ${t.status !== 'completed' ? `<button onclick="completeTask(${t.id})" class="p-1.5 text-green-600 hover:bg-green-50 rounded mr-1" title="完成"><i class="fas fa-check"></i></button>` : ''}
+              <button onclick="deleteTask(${t.id})" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="删除"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function renderKanban(filtered) {
+      const pending = filtered.filter(t=>t.status==='pending');
+      const inProg = filtered.filter(t=>t.status==='in_progress');
+      const completed = filtered.filter(t=>t.status==='completed');
+      document.getElementById('kanbanPendingCount').textContent = pending.length;
+      document.getElementById('kanbanInProgressCount').textContent = inProg.length;
+      document.getElementById('kanbanCompletedCount').textContent = completed.length;
+
+      const renderCard = t => {
+        const p = priorityMap[t.priority] || priorityMap.medium;
+        const due = t.dueDate ? new Date(t.dueDate).toLocaleDateString('zh-CN') : '';
+        return `
+          <div class="kanban-card bg-white rounded-lg p-3 shadow-sm border border-gray-100" draggable="true" data-id="${t.id}">
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs px-2 py-0.5 rounded ${p.class}">${p.label}</span>
+              <button onclick="deleteTask(${t.id})" class="text-gray-400 hover:text-red-500"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <p class="text-sm font-medium text-gray-800 mb-2">${t.title}</p>
+            ${t.asin?`<p class="text-xs text-blue-600 mb-2">${t.asin}</p>`:''}
+            <div class="flex items-center justify-between text-xs text-gray-400">
+              <span><i class="far fa-calendar mr-1"></i>${due||'无截止日期'}</span>
+              <button onclick="nextStatus(${t.id})" class="text-blue-600 hover:text-blue-700"><i class="fas fa-chevron-right"></i></button>
+            </div>
+          </div>`;
+      };
+      document.getElementById('kanbanPending').innerHTML = pending.length ? pending.map(renderCard).join('') : '<div class="text-center text-gray-400 text-sm py-4">无任务</div>';
+      document.getElementById('kanbanInProgress').innerHTML = inProg.length ? inProg.map(renderCard).join('') : '<div class="text-center text-gray-400 text-sm py-4">无任务</div>';
+      document.getElementById('kanbanCompleted').innerHTML = completed.length ? completed.map(renderCard).join('') : '<div class="text-center text-gray-400 text-sm py-4">无任务</div>';
+    }
+
+    function updateStats(filtered) {
+      document.getElementById('statPending').textContent = filtered.filter(t=>t.status==='pending').length;
+      document.getElementById('statInProgress').textContent = filtered.filter(t=>t.status==='in_progress').length;
+      document.getElementById('statCompleted').textContent = filtered.filter(t=>t.status==='completed').length;
+      const today = new Date().toISOString().slice(0,10);
+      document.getElementById('statDueToday').textContent = filtered.filter(t=>t.dueDate===today && t.status!=='completed').length;
+    }
+
+    // ===================== ACTIONS =====================
+    function setView(v) {
+      currentView = v;
+      document.getElementById('viewList').classList.toggle('active', v==='list');
+      document.getElementById('viewKanban').classList.toggle('active', v==='kanban');
+      document.getElementById('listView').classList.toggle('hidden', v!=='list');
+      document.getElementById('kanbanView').classList.toggle('hidden', v!=='kanban');
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    async function saveTask() {
+      const title = document.getElementById('newTaskTitle').value.trim();
+      if (!title) { alert('请输入任务标题'); return; }
+      await OpsAPI.create('tasks', {
+        title,
+        priority: document.getElementById('newTaskPriority').value,
+        due_date: document.getElementById('newTaskDue').value || null,
+        asin: document.getElementById('newTaskAsin').value.trim().toUpperCase() || null,
+        description: document.getElementById('newTaskDesc').value.trim(),
+        status: 'pending'
+      });
+      await loadData();
+      closeModal('taskModal');
+      document.getElementById('newTaskTitle').value=''; document.getElementById('newTaskDue').value='';
+      document.getElementById('newTaskAsin').value=''; document.getElementById('newTaskDesc').value='';
+    }
+
+    async function progressTask(id) { const t=tasks.find(x=>x.id===id); if(t){ await OpsAPI.update('tasks', id, { status: 'in_progress' }); await loadData(); } }
+    async function completeTask(id) { const t=tasks.find(x=>x.id===id); if(t){ await OpsAPI.update('tasks', id, { status: 'completed' }); await loadData(); } }
+    async function nextStatus(id) {
+      const t=tasks.find(x=>x.id===id); if(!t)return;
+      const flow = {pending:'in_progress',in_progress:'completed',completed:'completed'};
+      await OpsAPI.update('tasks', id, { status: flow[t.status] });
+      await loadData();
+    }
+    async function deleteTask(id) { if(!confirm('确定删除此任务？'))return; await OpsAPI.remove('tasks', id); await loadData(); }
+
+    // ===================== EVENTS =====================
+    document.getElementById('taskSearch')?.addEventListener('input', renderAll);
+    document.getElementById('priorityFilter')?.addEventListener('change', renderAll);
+    document.getElementById('selectAll')?.addEventListener('change', e=>{
+      document.querySelectorAll('.task-checkbox').forEach(cb=>cb.checked=e.target.checked);
+    });
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('sidebarToggle')?.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+      document.addEventListener('click', e => { if (window.innerWidth<1024 && !sidebar.contains(e.target) && !document.getElementById('mobileMenuBtn')?.contains(e.target)) sidebar.classList.add('-translate-x-full'); });
+      if (window.innerWidth<1024) sidebar.classList.add('-translate-x-full');
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', () => { loadData(); initSidebar(); updateBadges(); });
+  </script>
+</body>
+</html>
