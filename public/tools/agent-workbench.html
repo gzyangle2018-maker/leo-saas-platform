@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - Agent工作台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="/js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1); color: #2563eb; border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .chat-bubble { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+    .agent-card { transition: all 0.2s; }
+    .agent-card:hover { border-color: #c4b5fd; background: #faf5ff; }
+    .agent-card.active { border-color: #8b5cf6; background: #f3e8ff; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center"><i class="fas fa-cube text-white text-sm"></i></div>
+        <div><h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1><p class="text-xs text-gray-500">Operations Hub</p></div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    </div>
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-book w-5 text-center"></i><span>知识库</span></a>
+      <a href="asin-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-barcode w-5 text-center"></i><span>ASIN工作台</span></a>
+      <a href="task-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-tasks w-5 text-center"></i><span>任务中心</span><span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-robot w-5 text-center"></i><span>Agent工作台</span><span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-check-circle w-5 text-center"></i><span>审批中心</span><span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-exclamation-triangle w-5 text-center"></i><span>异常中心</span><span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-history w-5 text-center"></i><span>复盘中心</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-cog w-5 text-center"></i><span>系统设置</span></a>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-lg"></i></button>
+          <h2 class="text-lg font-semibold text-gray-800">Agent工作台</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden md:block">
+            <input type="text" placeholder="搜索..." class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><i class="fas fa-bell"></i><span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span></button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm:block"><p class="text-sm font-medium text-gray-800">运营管理员</p><p class="text-xs text-gray-500">admin@amazon.com</p></div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">A</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-180px)]">
+        <!-- Agent Selection -->
+        <div class="lg:col-span-1 flex flex-col gap-4">
+          <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+            <h4 class="font-semibold text-gray-800 mb-4">选择Agent</h4>
+            <div class="space-y-3" id="agentList">
+              <div class="agent-card active flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer" onclick="selectAgent('general')">
+                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-robot text-purple-600"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">通用助手</p><p class="text-xs text-gray-500">回答运营问题，提供建议</p></div>
+              </div>
+              <div class="agent-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer" onclick="selectAgent('ad')">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-bullhorn text-blue-600"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">广告优化师</p><p class="text-xs text-gray-500">分析广告数据，优化PPC</p></div>
+              </div>
+              <div class="agent-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer" onclick="selectAgent('listing')">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-edit text-green-600"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">Listing专家</p><p class="text-xs text-gray-500">优化标题、五点、A+</p></div>
+              </div>
+              <div class="agent-card flex items-center gap-3 p-3 border border-gray-200 rounded-xl cursor-pointer" onclick="selectAgent('data')">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"><i class="fas fa-chart-line text-orange-600"></i></div>
+                <div><p class="text-sm font-medium text-gray-800">数据分析师</p><p class="text-xs text-gray-500">分析销售趋势，生成报告</p></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+            <h4 class="font-semibold text-gray-800 mb-3">快捷指令</h4>
+            <div class="space-y-2" id="quickPrompts">
+              <button onclick="sendQuick('分析今日销售数据')" class="w-full text-left px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">📊 分析今日销售数据</button>
+              <button onclick="sendQuick('优化广告ACoS的建议')" class="w-full text-left px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">📈 优化广告ACoS的建议</button>
+              <button onclick="sendQuick('生成本周运营周报要点')" class="w-full text-left px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">📝 生成本周运营周报要点</button>
+              <button onclick="sendQuick('检查库存预警ASIN')" class="w-full text-left px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">⚠️ 检查库存预警ASIN</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="lg:col-span-2 flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden card-hover">
+          <div class="flex items-center justify-between p-4 border-b border-gray-100">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-sm"></i></div>
+              <div>
+                <p class="text-sm font-medium text-gray-800" id="chatAgentName">通用助手</p>
+                <p class="text-xs text-gray-500 flex items-center gap-1"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span>在线</p>
+              </div>
+            </div>
+            <button onclick="clearChat()" class="text-xs text-gray-500 hover:text-red-500"><i class="fas fa-trash-alt mr-1"></i>清空</button>
+          </div>
+
+          <div id="chatMessages" class="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide" style="min-height: 300px;">
+            <div class="chat-bubble flex gap-3">
+              <div class="w-8 h-8 bg-purple-100 rounded-lg flex-shrink-0 flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-xs"></i></div>
+              <div class="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3 max-w-[80%]">
+                <p class="text-sm text-gray-700">你好！我是Amazon运营智能助手。我可以帮助你分析数据、优化广告、撰写Listing等。请问有什么可以帮你的？</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 border-t border-gray-100">
+            <div class="flex items-end gap-2 bg-gray-50 rounded-xl p-2">
+              <textarea id="chatInput" rows="1" class="flex-1 bg-transparent px-3 py-2 text-sm resize-none focus:outline-none max-h-32" placeholder="输入消息..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+              <button onclick="sendMessage()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <p class="text-xs text-gray-400 mt-2 text-center">LLM尚未配置，当前为模拟回复。请前往设置配置API密钥。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <script>
+    requireAuth();
+
+    // ===================== STATE =====================
+    let currentAgent = 'general';
+    let chatHistory = JSON.parse(localStorage.getItem('amz_chat') || '[]');
+    const agents = {
+      general: { name: '通用助手', icon: 'fa-robot', color: 'purple' },
+      ad: { name: '广告优化师', icon: 'fa-bullhorn', color: 'blue' },
+      listing: { name: 'Listing专家', icon: 'fa-edit', color: 'green' },
+      data: { name: '数据分析师', icon: 'fa-chart-line', color: 'orange' }
+    };
+
+    const quickPromptsMap = {
+      general: ['📊 分析今日销售数据','📈 优化广告ACoS的建议','📝 生成本周运营周报要点','⚠️ 检查库存预警ASIN'],
+      ad: ['📊 分析广告流量结构','💰 建议每日预算分配','🔍 搜索词报告分析','📉 降低ACoS的策略'],
+      listing: ['✏️ 优化产品标题建议','🖼️ A+页面内容建议','🔑 关键词埋词建议','⭐ 提升Review转化率'],
+      data: ['📈 7天销售趋势分析','📊 竞品数据对比','💵 利润率分析报告','📅 月度运营总结']
+    };
+
+    const mockReplies = {
+      '销售': '根据当前数据，今日销售额为 $4,231.50，较昨日上涨 12%。主要贡献ASIN为 B08XYZ123 和 B08DEF789。建议关注 B08ABC456 的销量下滑情况。',
+      '广告': '当前整体ACoS为 24.2%，处于健康范围。建议：\n1. 对高点击低转化的关键词降低竞价 10%\n2. 增加品牌词预算分配\n3. 开启商品投放广告测试',
+      '周报': '本周运营要点：\n• 总销售额 $28,500 (+8% WoW)\n• 广告花费 $7,200，ACoS 25.3%\n• 新增Review 45个，平均评分 4.6\n• 异常事件 2项已处理',
+      '库存': '库存预警：\n• B08ABC456 - 剩余库存 15件，建议立即补货\n• B08XYZ123 - 库存周转天数 45天，正常\n• B08DEF789 - 在途货物预计5天后到达',
+      '标题': '标题优化建议：\n1. 核心关键词前置（前80字符）\n2. 包含品牌名 + 型号 + 核心功能\n3. 避免促销词汇\n4. 控制在200字符以内',
+      'A+': 'A+页面优化建议：\n1. 品牌故事模块突出差异化\n2. 对比图突出产品优势\n3. 使用场景图增加代入感\n4. 确保移动端显示效果',
+      '预算': '建议预算分配：\n• SP广告: 60% ($600/日)\n• SB广告: 25% ($250/日)\n• SD广告: 15% ($150/日)\n根据表现每3天调整一次。',
+      '利润': '本周利润分析：\n• 总营收: $28,500\n• 产品成本: $12,800\n• 广告花费: $7,200\n• FBA费用: $4,200\n• 净利润: $4,300 (利润率 15.1%)'
+    };
+
+    function saveChat() { localStorage.setItem('amz_chat', JSON.stringify(chatHistory)); }
+
+    // ===================== RENDER =====================
+    function renderChat() {
+      const container = document.getElementById('chatMessages');
+      container.innerHTML = '';
+      if (chatHistory.length === 0) {
+        container.innerHTML = `
+          <div class="chat-bubble flex gap-3">
+            <div class="w-8 h-8 bg-purple-100 rounded-lg flex-shrink-0 flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-xs"></i></div>
+            <div class="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3 max-w-[80%]">
+              <p class="text-sm text-gray-700">你好！我是Amazon运营智能助手。我可以帮助你分析数据、优化广告、撰写Listing等。请问有什么可以帮你的？</p>
+            </div>
+          </div>`;
+        return;
+      }
+      chatHistory.forEach(msg => {
+        const isUser = msg.role === 'user';
+        container.innerHTML += `
+          <div class="chat-bubble flex gap-3 ${isUser?'flex-row-reverse':''}">
+            <div class="w-8 h-8 ${isUser?'bg-blue-100':'bg-purple-100'} rounded-lg flex-shrink-0 flex items-center justify-center">
+              <i class="fas ${isUser?'fa-user':'fa-robot'} ${isUser?'text-blue-600':'text-purple-600'} text-xs"></i>
+            </div>
+            <div class="${isUser?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'} rounded-xl ${isUser?'rounded-tr-sm':'rounded-tl-sm'} px-4 py-3 max-w-[80%] whitespace-pre-wrap text-sm">
+              ${msg.content}
+            </div>
+          </div>`;
+      });
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function renderQuickPrompts() {
+      const container = document.getElementById('quickPrompts');
+      const prompts = quickPromptsMap[currentAgent] || quickPromptsMap.general;
+      container.innerHTML = prompts.map(p => {
+        const text = p.replace(/^[^\s]+\s/, '');
+        return `<button onclick="sendQuick('${text}')" class="w-full text-left px-3 py-2 bg-gray-50 rounded-lg text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors">${p}</button>`;
+      }).join('');
+    }
+
+    // ===================== ACTIONS =====================
+    function selectAgent(key) {
+      currentAgent = key;
+      document.querySelectorAll('.agent-card').forEach((el,i) => {
+        const keys = ['general','ad','listing','data'];
+        el.classList.toggle('active', keys[i] === key);
+      });
+      const agent = agents[key];
+      document.getElementById('chatAgentName').textContent = agent.name;
+      renderQuickPrompts();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim(); if (!text) return;
+      chatHistory.push({ role: 'user', content: text, agent: currentAgent, time: Date.now() });
+      input.value = ''; saveChat(); renderChat(); showTyping();
+      setTimeout(() => { removeTyping(); reply(text); }, 1200);
+    }
+
+    function sendQuick(text) { document.getElementById('chatInput').value = text; sendMessage(); }
+
+    function showTyping() {
+      const container = document.getElementById('chatMessages');
+      container.innerHTML += `
+        <div id="typingIndicator" class="chat-bubble flex gap-3">
+          <div class="w-8 h-8 bg-purple-100 rounded-lg flex-shrink-0 flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-xs"></i></div>
+          <div class="bg-gray-100 rounded-xl rounded-tl-sm px-4 py-3">
+            <div class="flex gap-1"><span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span><span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span><span class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></span></div>
+          </div>
+        </div>`;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTyping() { document.getElementById('typingIndicator')?.remove(); }
+
+    function reply(userText) {
+      let replyText = '收到您的问题，我将为您分析...\n\n[注意：LLM尚未配置，当前为模拟回复]';
+      for (const [key, val] of Object.entries(mockReplies)) {
+        if (userText.includes(key)) { replyText = val; break; }
+      }
+      chatHistory.push({ role: 'assistant', content: replyText, agent: currentAgent, time: Date.now() });
+      saveChat(); renderChat();
+    }
+
+    function clearChat() { if(!confirm('清空所有聊天记录？'))return; chatHistory=[]; saveChat(); renderChat(); }
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('sidebarToggle')?.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+      document.addEventListener('click', e => { if (window.innerWidth<1024 && !sidebar.contains(e.target) && !document.getElementById('mobileMenuBtn')?.contains(e.target)) sidebar.classList.add('-translate-x-full'); });
+      if (window.innerWidth<1024) sidebar.classList.add('-translate-x-full');
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', () => { renderChat(); renderQuickPrompts(); initSidebar(); updateBadges(); });
+  </script>
+</body>
+</html>
