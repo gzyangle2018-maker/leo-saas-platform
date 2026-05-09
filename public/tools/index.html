@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="/js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+      border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .metric-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .metric-card.orange { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .metric-card.green { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .metric-card.purple { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 0.5; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    .pulse-dot::before {
+      content: ''; position: absolute; width: 100%; height: 100%;
+      border-radius: 50%; background: inherit;
+      animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+          <i class="fas fa-cube text-white text-sm"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1>
+          <p class="text-xs text-gray-500">Operations Hub</p>
+        </div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-chart-pie w-5 text-center"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-book w-5 text-center"></i>
+        <span>知识库</span>
+      </a>
+      <a href="asin-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-barcode w-5 text-center"></i>
+        <span>ASIN工作台</span>
+      </a>
+      <a href="task-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-tasks w-5 text-center"></i>
+        <span>任务中心</span>
+        <span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+      </a>
+
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-robot w-5 text-center"></i>
+        <span>Agent工作台</span>
+        <span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span>
+      </a>
+
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-check-circle w-5 text-center"></i>
+        <span>审批中心</span>
+        <span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+      </a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-exclamation-triangle w-5 text-center"></i>
+        <span>异常中心</span>
+        <span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+      </a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-history w-5 text-center"></i>
+        <span>复盘中心</span>
+      </a>
+
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700">
+        <i class="fas fa-cog w-5 text-center"></i>
+        <span>系统设置</span>
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="lg:ml-64 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700">
+            <i class="fas fa-bars text-lg"></i>
+          </button>
+          <h2 class="text-lg font-semibold text-gray-800">Dashboard</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden md:block">
+            <input type="text" placeholder="搜索 ASIN、任务、知识..." 
+              class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <i class="fas fa-bell"></i>
+            <span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
+          </button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm:block">
+              <p class="text-sm font-medium text-gray-800">运营管理员</p>
+              <p class="text-xs text-gray-500">admin@amazon.com</p>
+            </div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm cursor-pointer">
+              A
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <div class="p-6">
+      <!-- Welcome Banner -->
+      <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-5 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        <div class="relative z-10">
+          <p class="text-blue-100 text-sm mb-1" id="greeting">下午好，运营管理员</p>
+          <h3 class="text-2xl font-bold mb-2">Amazon运营中台 Dashboard</h3>
+          <p class="text-blue-100 text-sm max-w-xl">今日待处理任务 <span id="headerTaskCount" class="font-bold text-white">0</span> 项，异常事件 <span id="headerExceptionCount" class="font-bold text-white">0</span> 项，审批待办 <span id="headerApprovalCount" class="font-bold text-white">0</span> 项。</p>
+        </div>
+      </div>
+
+      <!-- Key Metrics -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="metric-card rounded-xl p-5 text-white card-hover relative overflow-hidden">
+          <div class="absolute top-3 right-3 opacity-20"><i class="fas fa-dollar-sign text-4xl"></i></div>
+          <p class="text-white/80 text-sm mb-1">今日销售额</p>
+          <h4 class="text-2xl font-bold" id="todaySales">$0.00</h4>
+          <div class="flex items-center gap-1 mt-2 text-sm">
+            <i class="fas fa-arrow-up text-green-300"></i>
+            <span class="text-green-300">+0%</span>
+            <span class="text-white/60 ml-1">vs 昨日</span>
+          </div>
+        </div>
+        <div class="metric-card orange rounded-xl p-5 text-white card-hover relative overflow-hidden">
+          <div class="absolute top-3 right-3 opacity-20"><i class="fas fa-shopping-cart text-4xl"></i></div>
+          <p class="text-white/80 text-sm mb-1">今日订单</p>
+          <h4 class="text-2xl font-bold" id="todayOrders">0</h4>
+          <div class="flex items-center gap-1 mt-2 text-sm">
+            <i class="fas fa-arrow-up text-green-300"></i>
+            <span class="text-green-300">+0%</span>
+            <span class="text-white/60 ml-1">vs 昨日</span>
+          </div>
+        </div>
+        <div class="metric-card green rounded-xl p-5 text-white card-hover relative overflow-hidden">
+          <div class="absolute top-3 right-3 opacity-20"><i class="fas fa-ad text-4xl"></i></div>
+          <p class="text-white/80 text-sm mb-1">广告花费 / ACoS</p>
+          <h4 class="text-2xl font-bold" id="adSpend">$0.00</h4>
+          <div class="flex items-center gap-1 mt-2 text-sm">
+            <span class="text-white/80">ACoS</span>
+            <span class="font-semibold" id="acosValue">0%</span>
+          </div>
+        </div>
+        <div class="metric-card purple rounded-xl p-5 text-white card-hover relative overflow-hidden">
+          <div class="absolute top-3 right-3 opacity-20"><i class="fas fa-star text-4xl"></i></div>
+          <p class="text-white/80 text-sm mb-1">平均评分 / Review</p>
+          <h4 class="text-2xl font-bold" id="avgRating">0.0</h4>
+          <div class="flex items-center gap-1 mt-2 text-sm">
+            <span class="text-white/80">今日新增</span>
+            <span class="font-semibold" id="newReviews">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-gray-800">销售趋势 (7天)</h4>
+            <div class="flex gap-2">
+              <button class="px-3 py-1 text-xs bg-blue-50 text-blue-600 rounded-lg font-medium">7天</button>
+              <button class="px-3 py-1 text-xs text-gray-500 hover:bg-gray-50 rounded-lg">30天</button>
+              <button class="px-3 py-1 text-xs text-gray-500 hover:bg-gray-50 rounded-lg">90天</button>
+            </div>
+          </div>
+          <canvas id="salesChart" height="100"></canvas>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <h4 class="font-semibold text-gray-800 mb-4">流量结构占比</h4>
+          <canvas id="trafficChart" height="140"></canvas>
+          <div class="mt-4 space-y-2">
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span>自然搜索</span></div>
+              <span class="font-medium">45%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-orange-400"></span><span>广告流量</span></div>
+              <span class="font-medium">35%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-green-400"></span><span>关联推荐</span></div>
+              <span class="font-medium">15%</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-purple-400"></span><span>其他</span></div>
+              <span class="font-medium">5%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Pending Tasks -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-gray-800">待办任务</h4>
+            <a href="task-hub.html" class="text-sm text-blue-600 hover:text-blue-700">查看全部 <i class="fas fa-arrow-right text-xs"></i></a>
+          </div>
+          <div id="taskList" class="space-y-3">
+            <div class="text-center text-gray-400 py-8">暂无待办任务</div>
+          </div>
+        </div>
+
+        <!-- Recent Exceptions -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-gray-800">最近异常</h4>
+            <a href="exception-center.html" class="text-sm text-blue-600 hover:text-blue-700">查看全部 <i class="fas fa-arrow-right text-xs"></i></a>
+          </div>
+          <div id="exceptionList" class="space-y-3">
+            <div class="text-center text-gray-400 py-8">暂无异常事件</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <h4 class="font-semibold text-gray-800 mb-4">快捷操作</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <a href="asin-workbench.html" class="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+              <i class="fas fa-plus-circle text-xl"></i>
+              <span class="text-sm">新建ASIN</span>
+            </a>
+            <a href="task-hub.html" class="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+              <i class="fas fa-clipboard-list text-xl"></i>
+              <span class="text-sm">创建任务</span>
+            </a>
+            <a href="knowledge-hub.html" class="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors">
+              <i class="fas fa-file-alt text-xl"></i>
+              <span class="text-sm">新建知识</span>
+            </a>
+            <a href="agent-workbench.html" class="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl hover:bg-purple-50 hover:text-purple-600 transition-colors">
+              <i class="fas fa-magic text-xl"></i>
+              <span class="text-sm">AI助手</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- ASIN Overview -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="font-semibold text-gray-800">ASIN概览</h4>
+            <a href="asin-workbench.html" class="text-sm text-blue-600 hover:text-blue-700">查看全部 <i class="fas fa-arrow-right text-xs"></i></a>
+          </div>
+          <div id="asinList" class="space-y-3">
+            <div class="text-center text-gray-400 py-8">暂无ASIN数据</div>
+          </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 card-hover">
+          <h4 class="font-semibold text-gray-800 mb-4">系统状态</h4>
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">Agent服务</span>
+                <span class="text-green-600 font-medium flex items-center gap-1">
+                  <span class="relative w-2 h-2 bg-green-500 rounded-full pulse-dot inline-block"></span> 运行中
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">数据同步</span>
+                <span class="text-green-600 font-medium flex items-center gap-1">
+                  <span class="relative w-2 h-2 bg-green-500 rounded-full pulse-dot inline-block"></span> 正常
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">上次同步: <span id="lastSync">--</span></p>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">LLM连接</span>
+                <span class="text-yellow-600 font-medium flex items-center gap-1">
+                  <span class="w-2 h-2 bg-yellow-500 rounded-full inline-block"></span> 未配置
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">在设置中配置API密钥</p>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">MCP服务</span>
+                <span class="text-gray-500 font-medium flex items-center gap-1">
+                  <span class="w-2 h-2 bg-gray-400 rounded-full inline-block"></span> 未连接
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1">在设置中配置MCP</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <script>
+    // ===================== AUTH =====================
+    requireAuth();
+
+    // ===================== STATE =====================
+    let tasks = [];
+    let exceptions = [];
+    let asins = [];
+    let approvals = [];
+
+    // ===================== DATA LOADING =====================
+    async function loadData() {
+      try {
+        const [tRes, eRes, aRes, appRes] = await Promise.all([
+          OpsAPI.list('tasks'),
+          OpsAPI.list('exceptions'),
+          OpsAPI.list('asins'),
+          OpsAPI.list('approvals'),
+        ]);
+        tasks = tRes.data || [];
+        exceptions = eRes.data || [];
+        asins = aRes.data || [];
+        approvals = appRes.data || [];
+
+        if (tasks.length === 0 && exceptions.length === 0 && asins.length === 0 && approvals.length === 0) {
+          await seedDemoData();
+          return loadData();
+        }
+
+        renderTasks();
+        renderExceptions();
+        renderAsins();
+        updateBadges();
+      } catch (err) {
+        console.error('Load data failed:', err);
+      }
+    }
+
+    async function seedDemoData() {
+      try {
+        await Promise.all([
+          OpsAPI.create('tasks', { title: '优化 B08XYZ123 广告竞价', priority: 'high', status: 'pending', due_date: '2026-05-01' }),
+          OpsAPI.create('tasks', { title: '更新 A+ 页面内容', priority: 'medium', status: 'pending', due_date: '2026-05-02' }),
+          OpsAPI.create('tasks', { title: '处理退货反馈分析', priority: 'low', status: 'completed', due_date: '2026-04-30' }),
+          OpsAPI.create('exceptions', { title: 'ACoS 超过阈值 35%', asin: 'B08XYZ123', severity: 'high', status: 'open' }),
+          OpsAPI.create('exceptions', { title: '库存低于安全水位', asin: 'B08ABC456', severity: 'medium', status: 'open' }),
+          OpsAPI.create('asins', { asin_code: 'B08XYZ123', title: 'Wireless Bluetooth Headphones', sales: 1280, orders: 45, acos: 22.5 }),
+          OpsAPI.create('asins', { asin_code: 'B08ABC456', title: 'USB-C Charging Cable 6ft', sales: 850, orders: 120, acos: 18.3 }),
+          OpsAPI.create('asins', { asin_code: 'B08DEF789', title: 'Phone Case for iPhone 15', sales: 2100, orders: 180, acos: 15.7 }),
+          OpsAPI.create('approvals', { title: '广告预算上调申请 $500', requestor: '张三', status: 'pending' }),
+          OpsAPI.create('approvals', { title: '新品上架审批', requestor: '李四', status: 'pending' }),
+        ]);
+      } catch (err) {
+        console.error('Seed demo data failed:', err);
+      }
+    }
+
+    // ===================== RENDER FUNCTIONS =====================
+    function renderTasks() {
+      const list = document.getElementById('taskList');
+      const pending = tasks.filter(t => t.status === 'pending').slice(0, 5);
+      if (pending.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-8">暂无待办任务</div>';
+        return;
+      }
+      list.innerHTML = pending.map(t => {
+        const priorityColors = { high: 'text-red-600 bg-red-50', medium: 'text-orange-600 bg-orange-50', low: 'text-green-600 bg-green-50' };
+        const priorityLabels = { high: '高', medium: '中', low: '低' };
+        return `
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick="window.location.href='task-hub.html'">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 rounded-full ${t.priority === 'high' ? 'bg-red-500' : t.priority === 'medium' ? 'bg-orange-500' : 'bg-green-500'}"></div>
+              <div>
+                <p class="text-sm font-medium text-gray-800">${t.title}</p>
+                <p class="text-xs text-gray-500">截止: ${t.dueDate || '未设置'}</p>
+              </div>
+            </div>
+            <span class="text-xs px-2 py-1 rounded ${priorityColors[t.priority]}">${priorityLabels[t.priority]}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderExceptions() {
+      const list = document.getElementById('exceptionList');
+      const open = exceptions.filter(e => e.status === 'open').slice(0, 5);
+      if (open.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-8">暂无异常事件</div>';
+        return;
+      }
+      list.innerHTML = open.map(e => {
+        const severityColors = { high: 'text-red-600', medium: 'text-orange-600', low: 'text-yellow-600' };
+        const severityLabels = { high: '严重', medium: '一般', low: '轻微' };
+        return `
+          <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick="window.location.href='exception-center.html'">
+            <div class="flex items-center gap-3">
+              <i class="fas fa-exclamation-circle ${severityColors[e.severity]}"></i>
+              <div>
+                <p class="text-sm font-medium text-gray-800">${e.title}</p>
+                <p class="text-xs text-gray-500">ASIN: ${e.asin || 'N/A'}</p>
+              </div>
+            </div>
+            <span class="text-xs font-medium ${severityColors[e.severity]}">${severityLabels[e.severity]}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAsins() {
+      const list = document.getElementById('asinList');
+      const items = asins.slice(0, 5);
+      if (items.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-8">暂无ASIN数据</div>';
+        return;
+      }
+      list.innerHTML = items.map(a => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onclick="window.location.href='asin-workbench.html'">
+          <div>
+            <p class="text-sm font-medium text-gray-800">${a.asin}</p>
+            <p class="text-xs text-gray-500 truncate max-w-[180px]">${a.title || '未命名'}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm font-semibold text-gray-800">$${a.sales?.toLocaleString() || 0}</p>
+            <p class="text-xs text-gray-500">ACoS ${a.acos || 0}%</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ===================== CHARTS =====================
+    function initCharts() {
+      const salesCtx = document.getElementById('salesChart');
+      if (salesCtx) {
+        new Chart(salesCtx, {
+          type: 'line',
+          data: {
+            labels: ['4/24', '4/25', '4/26', '4/27', '4/28', '4/29', '4/30'],
+            datasets: [{
+              label: '销售额 ($)',
+              data: [3200, 2800, 3500, 3100, 4200, 3800, 4100],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#3b82f6'
+            }, {
+              label: '广告花费 ($)',
+              data: [800, 700, 900, 750, 1100, 950, 1000],
+              borderColor: '#f97316',
+              backgroundColor: 'transparent',
+              fill: false,
+              tension: 0.4,
+              pointRadius: 3,
+              pointBackgroundColor: '#f97316',
+              borderDash: [5, 5]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      const trafficCtx = document.getElementById('trafficChart');
+      if (trafficCtx) {
+        new Chart(trafficCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['自然搜索', '广告流量', '关联推荐', '其他'],
+            datasets: [{
+              data: [45, 35, 15, 5],
+              backgroundColor: ['#3b82f6', '#fb923c', '#4ade80', '#c084fc'],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+    }
+
+    // ===================== GREETING & TIME =====================
+    function updateGreeting() {
+      const hour = new Date().getHours();
+      const greeting = hour < 12 ? '早上好' : hour < 18 ? '下午好' : '晚上好';
+      document.getElementById('greeting').textContent = `${greeting}，运营管理员`;
+      document.getElementById('lastSync').textContent = new Date().toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const mobileBtn = document.getElementById('mobileMenuBtn');
+
+      toggle?.addEventListener('click', () => {
+        sidebar.classList.add('-translate-x-full');
+      });
+
+      mobileBtn?.addEventListener('click', () => {
+        sidebar.classList.remove('-translate-x-full');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !mobileBtn?.contains(e.target)) {
+          sidebar.classList.add('-translate-x-full');
+        }
+      });
+
+      if (window.innerWidth < 1024) {
+        sidebar.classList.add('-translate-x-full');
+      }
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      initCharts();
+      updateGreeting();
+      initSidebar();
+
+      document.getElementById('todaySales').textContent = '$4,231.50';
+      document.getElementById('todayOrders').textContent = '156';
+      document.getElementById('adSpend').textContent = '$1,024.80';
+      document.getElementById('acosValue').textContent = '24.2%';
+      document.getElementById('avgRating').textContent = '4.6';
+      document.getElementById('newReviews').textContent = '+12';
+    });
+  </script>
+</body>
+</html>
