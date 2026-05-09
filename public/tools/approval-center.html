@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - 审批中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="/js/api.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1); color: #2563eb; border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .tab-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .approval-card { transition: all 0.2s; }
+    .approval-card:hover { background: #f8fafc; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center"><i class="fas fa-cube text-white text-sm"></i></div>
+        <div><h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1><p class="text-xs text-gray-500">Operations Hub</p></div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    </div>
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-book w-5 text-center"></i><span>知识库</span></a>
+      <a href="asin-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-barcode w-5 text-center"></i><span>ASIN工作台</span></a>
+      <a href="task-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-tasks w-5 text-center"></i><span>任务中心</span><span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-robot w-5 text-center"></i><span>Agent工作台</span><span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-check-circle w-5 text-center"></i><span>审批中心</span><span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-exclamation-triangle w-5 text-center"></i><span>异常中心</span><span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-history w-5 text-center"></i><span>复盘中心</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-cog w-5 text-center"></i><span>系统设置</span></a>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-lg"></i></button>
+          <h2 class="text-lg font-semibold text-gray-800">审批中心</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden md:block">
+            <input type="text" placeholder="搜索审批..." class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><i class="fas fa-bell"></i><span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span></button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm:block"><p class="text-sm font-medium text-gray-800">运营管理员</p><p class="text-xs text-gray-500">admin@amazon.com</p></div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">A</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <!-- Tabs -->
+      <div class="flex items-center gap-1 bg-white rounded-xl border border-gray-200 p-1 mb-6 w-fit">
+        <button onclick="setTab('pending')" id="tabPending" class="tab-btn active px-4 py-2 text-sm font-medium rounded-lg">待审批</button>
+        <button onclick="setTab('approved')" id="tabApproved" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg">已通过</button>
+        <button onclick="setTab('rejected')" id="tabRejected" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg">已拒绝</button>
+        <button onclick="setTab('all')" id="tabAll" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg">全部</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">待审批</p>
+          <h4 class="text-xl font-bold text-orange-600" id="statPending">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">已通过</p>
+          <h4 class="text-xl font-bold text-green-600" id="statApproved">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">已拒绝</p>
+          <h4 class="text-xl font-bold text-red-600" id="statRejected">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">平均审批时长</p>
+          <h4 class="text-xl font-bold text-gray-800" id="statAvgTime">--</h4>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input type="text" id="approvalSearch" placeholder="搜索审批..." class="w-72 pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          </div>
+        </div>
+        <button onclick="openModal('approvalModal')" class="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">
+          <i class="fas fa-plus mr-2"></i>发起审批
+        </button>
+      </div>
+
+      <!-- Approval List -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden card-hover">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">审批事项</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">申请人</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">类型</th>
+              <th class="px-4 py-3 text-right font-medium text-gray-600">金额</th>
+              <th class="px-4 py-3 text-center font-medium text-gray-600">状态</th>
+              <th class="px-4 py-3 text-left font-medium text-gray-600">申请时间</th>
+              <th class="px-4 py-3 text-center font-medium text-gray-600">操作</th>
+            </tr>
+          </thead>
+          <tbody id="approvalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <!-- New Approval Modal -->
+  <div id="approvalModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-lg mx-4">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-800">发起审批</h3>
+        <button onclick="closeModal('approvalModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">审批标题</label>
+          <input type="text" id="newAppTitle" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入审批标题">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">审批类型</label>
+            <select id="newAppType" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="budget">预算调整</option><option value="launch">新品上架</option><option value="price">价格变更</option><option value="promo">促销活动</option><option value="other">其他</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">金额 ($)</label>
+            <input type="number" id="newAppAmount" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">申请人</label>
+          <input type="text" id="newAppRequestor" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入申请人姓名">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">审批说明</label>
+          <textarea id="newAppDesc" rows="3" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" placeholder="输入审批说明..."></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+        <button onclick="closeModal('approvalModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+        <button onclick="saveApproval()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">提交审批</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-lg mx-4">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-800">审批详情</h3>
+        <button onclick="closeModal('detailModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-4" id="detailContent"></div>
+      <div class="flex justify-end gap-3 p-5 border-t border-gray-100" id="detailActions"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    requireAuth();
+    let approvals = [];
+    let currentTab = 'pending';
+    let currentApprovalId = null;
+
+    async function loadData() {
+      const res = await OpsAPI.list('approvals');
+      approvals = (res.data || []).map(item => ({ ...item, desc: item.description }));
+      renderAll();
+    }
+
+    const typeMap = { budget: '预算调整', launch: '新品上架', price: '价格变更', promo: '促销活动', other: '其他' };
+    const statusMap = {
+      pending: { label: '待审批', class: 'bg-orange-100 text-orange-700' },
+      approved: { label: '已通过', class: 'bg-green-100 text-green-700' },
+      rejected: { label: '已拒绝', class: 'bg-red-100 text-red-700' }
+    };
+
+    // ===================== RENDER =====================
+    function renderAll() {
+      const search = document.getElementById('approvalSearch')?.value.toLowerCase() || '';
+      let filtered = approvals;
+      if (currentTab !== 'all') filtered = filtered.filter(a => a.status === currentTab);
+      if (search) filtered = filtered.filter(a => (a.title+a.requestor+a.desc||'').toLowerCase().includes(search));
+
+      const tbody = document.getElementById('approvalTableBody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-gray-400 py-8">暂无审批记录</td></tr>';
+      } else {
+        tbody.innerHTML = filtered.map(a => {
+          const s = statusMap[a.status] || statusMap.pending;
+          const t = typeMap[a.type] || '其他';
+          return `
+            <tr class="approval-card border-b border-gray-100 cursor-pointer" onclick="viewApproval(${a.id})">
+              <td class="px-4 py-3"><p class="text-sm font-medium text-gray-800">${a.title}</p><p class="text-xs text-gray-500 truncate max-w-[200px]">${a.desc||''}</p></td>
+              <td class="px-4 py-3 text-sm text-gray-700">${a.requestor||'-'}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">${t}</td>
+              <td class="px-4 py-3 text-sm text-right font-medium">${a.amount ? '$'+parseFloat(a.amount).toLocaleString() : '-'}</td>
+              <td class="px-4 py-3 text-center"><span class="text-xs px-2 py-1 rounded ${s.class}">${s.label}</span></td>
+              <td class="px-4 py-3 text-sm text-gray-500">${new Date(a.createdAt).toLocaleDateString('zh-CN')}</td>
+              <td class="px-4 py-3 text-center">
+                ${a.status==='pending' ? `<button onclick="event.stopPropagation(); approveItem(${a.id})" class="p-1.5 text-green-600 hover:bg-green-50 rounded mr-1" title="通过"><i class="fas fa-check"></i></button><button onclick="event.stopPropagation(); rejectItem(${a.id})" class="p-1.5 text-red-500 hover:bg-red-50 rounded" title="拒绝"><i class="fas fa-times"></i></button>` : '<span class="text-gray-400 text-xs">--</span>'}
+              </td>
+            </tr>`;
+        }).join('');
+      }
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('statPending').textContent = approvals.filter(a=>a.status==='pending').length;
+      document.getElementById('statApproved').textContent = approvals.filter(a=>a.status==='approved').length;
+      document.getElementById('statRejected').textContent = approvals.filter(a=>a.status==='rejected').length;
+    }
+
+    // ===================== ACTIONS =====================
+    function setTab(tab) {
+      currentTab = tab;
+      ['pending','approved','rejected','all'].forEach(t => document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab));
+      renderAll();
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    async function saveApproval() {
+      const title = document.getElementById('newAppTitle').value.trim();
+      if (!title) { alert('请输入审批标题'); return; }
+      await OpsAPI.create('approvals', {
+        title, type: document.getElementById('newAppType').value,
+        amount: document.getElementById('newAppAmount').value || null,
+        requestor: document.getElementById('newAppRequestor').value.trim() || '未知',
+        description: document.getElementById('newAppDesc').value.trim(),
+        status: 'pending', createdAt: new Date().toISOString()
+      });
+      await loadData(); closeModal('approvalModal');
+      document.getElementById('newAppTitle').value=''; document.getElementById('newAppAmount').value='';
+      document.getElementById('newAppRequestor').value=''; document.getElementById('newAppDesc').value='';
+    }
+
+    function viewApproval(id) {
+      const a = approvals.find(x=>x.id===id); if(!a)return;
+      currentApprovalId = id;
+      const s = statusMap[a.status];
+      const t = typeMap[a.type] || '其他';
+      document.getElementById('detailContent').innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs px-2 py-1 rounded ${s.class}">${s.label}</span>
+          <span class="text-xs text-gray-400">${new Date(a.createdAt).toLocaleString('zh-CN')}</span>
+        </div>
+        <h4 class="font-semibold text-gray-800 text-lg">${a.title}</h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div><p class="text-gray-500">申请人</p><p class="font-medium text-gray-800">${a.requestor}</p></div>
+          <div><p class="text-gray-500">审批类型</p><p class="font-medium text-gray-800">${t}</p></div>
+          <div><p class="text-gray-500">金额</p><p class="font-medium text-gray-800">${a.amount ? '$'+parseFloat(a.amount).toLocaleString() : '-'}</p></div>
+        </div>
+        <div><p class="text-gray-500 text-sm mb-1">说明</p><p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">${a.desc||'无说明'}</p></div>
+      `;
+      document.getElementById('detailActions').innerHTML = a.status==='pending'
+        ? `<button onclick="closeModal('detailModal'); approveItem(${a.id})" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"><i class="fas fa-check mr-2"></i>通过</button><button onclick="closeModal('detailModal'); rejectItem(${a.id})" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"><i class="fas fa-times mr-2"></i>拒绝</button>`
+        : `<button onclick="closeModal('detailModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">关闭</button>`;
+      openModal('detailModal');
+    }
+
+    async function approveItem(id) { await OpsAPI.update('approvals', id, { status: 'approved' }); await loadData(); }
+    async function rejectItem(id) { await OpsAPI.update('approvals', id, { status: 'rejected' }); await loadData(); }
+
+    // ===================== EVENTS =====================
+    document.getElementById('approvalSearch')?.addEventListener('input', renderAll);
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('sidebarToggle')?.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+      document.addEventListener('click', e => { if (window.innerWidth<1024 && !sidebar.contains(e.target) && !document.getElementById('mobileMenuBtn')?.contains(e.target)) sidebar.classList.add('-translate-x-full'); });
+      if (window.innerWidth<1024) sidebar.classList.add('-translate-x-full');
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', () => { loadData(); initSidebar(); updateBadges(); });
+  </script>
+</body>
+</html>
