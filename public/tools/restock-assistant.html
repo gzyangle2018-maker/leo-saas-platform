@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>亚马逊备货助手 SaaS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  .drop-zone { border: 2px dashed #cbd5e1; transition: all 0.2s; }
+  .drop-zone.dragover { border-color: #3b82f6; background: #eff6ff; }
+  .cell-filled { background: #dcfce7 !important; }
+  .cell-excess { background: #fee2e2 !important; color: #dc2626; font-weight: 700; }
+  .cell-restock { background: #fef9c3 !important; color: #a16207; font-weight: 700; }
+  .sticky-header th { position: sticky; top: 0; z-index: 10; background: #f3f4f6; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<header class="bg-white shadow-sm border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">备</div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">亚马逊备货助手 SaaS</h1>
+        <p class="text-sm text-gray-500">上传投喂表格 → 自动计算填充 → 下载填好值的表格</p>
+      </div>
+    </div>
+    <div class="text-sm text-gray-500">今日: <span id="todayDisplay"></span></div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Rules Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 no-print">
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+      <div class="text-sm text-gray-500">深度备货触发</div>
+      <div class="text-lg font-bold text-gray-900">月销量 &gt; 600</div>
+      <div class="text-xs text-gray-400 mt-1">备货4个月库存</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+      <div class="text-sm text-gray-500">充公判定</div>
+      <div class="text-lg font-bold text-gray-900">库存 &gt; 5倍月销量</div>
+      <div class="text-xs text-gray-400 mt-1">转给其他团队</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-amber-500">
+      <div class="text-sm text-gray-500">下单时间</div>
+      <div class="text-lg font-bold text-gray-900">周二/五 17:00前</div>
+      <div class="text-xs text-gray-400 mt-1">海运订单截止</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+      <div class="text-sm text-gray-500">做货件日</div>
+      <div class="text-lg font-bold text-gray-900">周三/周四</div>
+      <div class="text-xs text-gray-400 mt-1">出货日期固定周五</div>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div class="bg-white rounded-lg shadow no-print">
+    <div class="p-4 border-b border-gray-200">
+      <h2 class="font-bold text-gray-900">1. 上传 ASIN 库存总结表</h2>
+      <p class="text-sm text-gray-500">保持原表 A-P 列结构不变，自动填充 L(海运补单)、N(海运下单)、O(日期)、P(备注)</p>
+    </div>
+    <div class="p-6">
+      <div id="dropZone" class="drop-zone rounded-lg p-8 text-center cursor-pointer bg-gray-50">
+        <div class="text-4xl mb-2">📁</div>
+        <p class="text-gray-700 font-medium">点击上传或拖拽文件到此处</p>
+        <p class="text-sm text-gray-400 mt-1">支持 Excel / CSV</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
+      <div id="fileInfo" class="mt-3 hidden">
+        <div class="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded">
+          <span>✅</span><span id="fileName"></span><span class="text-gray-400">|</span><span id="sheetInfo"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div id="actionSection" class="flex gap-3 hidden no-print">
+    <button id="calcBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm flex items-center gap-2">
+      <span>🚀</span> 智能分析并填充
+    </button>
+    <button id="resetBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm flex items-center gap-2">
+      <span>↩️</span> 重置原表
+    </button>
+    <button id="downloadBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm hidden flex items-center gap-2">
+      <span>📥</span> 下载填好值的表格
+    </button>
+  </div>
+
+  <!-- Results Summary -->
+  <div id="resultSummary" class="grid grid-cols-1 md:grid-cols-5 gap-4 hidden">
+    <div class="bg-white rounded-lg shadow p-4 text-center"><div class="text-2xl font-bold text-gray-900" id="totalAsins">0</div><div class="text-sm text-gray-500">分析ASIN数</div></div>
+    <div class="bg-white rounded-lg shadow p-4 text-center"><div class="text-2xl font-bold text-red-600" id="needRestockCount">0</div><div class="text-sm text-gray-500">需补货</div></div>
+    <div class="bg-white rounded-lg shadow p-4 text-center"><div class="text-2xl font-bold text-amber-600" id="needShipCount">0</div><div class="text-sm text-gray-500">本周需出货</div></div>
+    <div class="bg-white rounded-lg shadow p-4 text-center"><div class="text-2xl font-bold text-purple-600" id="excessCount">0</div><div class="text-sm text-gray-500">充公转移</div></div>
+    <div class="bg-white rounded-lg shadow p-4 text-center"><div class="text-2xl font-bold text-blue-600" id="deepStockCount">0</div><div class="text-sm text-gray-500">深度备货</div></div>
+  </div>
+
+  <!-- Preview Table -->
+  <div id="resultSection" class="bg-white rounded-lg shadow hidden">
+    <div class="p-4 border-b border-gray-200">
+      <h2 class="font-bold text-gray-900">2. 预览（绿色=已填充，红色=充公，黄色=需补货）</h2>
+      <p class="text-sm text-gray-500">L(海运补单)、N(海运下单)、O(日期)、P(备注) 已自动填充，可直接修改</p>
+    </div>
+    <div class="overflow-x-auto max-h-[600px]">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-100 sticky-header">
+          <tr>
+            <th class="px-2 py-2 text-left font-semibold text-gray-700 border-b text-xs">ASIN</th>
+            <th class="px-2 py-2 text-left font-semibold text-gray-700 border-b text-xs">SKU</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">30天销量</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">可售库存</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">未出货</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">本周要出</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">海运补单</th>
+            <th class="px-2 py-2 text-right font-semibold text-gray-700 border-b text-xs">海运下单</th>
+            <th class="px-2 py-2 text-left font-semibold text-gray-700 border-b text-xs">日期</th>
+            <th class="px-2 py-2 text-left font-semibold text-gray-700 border-b text-xs">备注</th>
+          </tr>
+        </thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ==================== Utils ====================
+function getTodayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+document.getElementById('todayDisplay').textContent = getTodayStr();
+
+function parseNum(v) {
+  if (v === undefined || v === null || v === '') return 0;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/,/g, '').replace(/\s/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function getNextFriday() {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = (5 - day + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return `${d.getMonth()+1}.${d.getDate()}`;
+}
+
+function detectProductType(sku, code) {
+  const s = String(sku || '').toLowerCase();
+  const c = String(code || '').toLowerCase();
+  const combined = s + ' ' + c;
+  if (combined.includes('asus') || combined.includes('square') || combined.includes('方形')) return { name: '方形壳/华硕壳', qty: 60 };
+  if (combined.includes('100w') || combined.includes('120w') || combined.includes('140w') || combined.includes('240w')) return { name: '大功率', qty: 40 };
+  return { name: '长条普通壳', qty: 50 };
+}
+
+// ==================== State ====================
+let originalRows = [];
+let headers = [];
+let colIndex = {};
+let workbook = null;
+let sheetName = '';
+let headerRowIdx = 0;
+
+// ==================== Upload ====================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+function handleFile(file) {
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileInfo').classList.remove('hidden');
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    workbook = XLSX.read(data, { type: 'array' });
+    sheetName = workbook.SheetNames[0];
+    document.getElementById('sheetInfo').textContent = `工作表: ${sheetName}`;
+    const ws = workbook.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    // Find header row
+    headerRowIdx = 0;
+    for (let i = 0; i < Math.min(json.length, 10); i++) {
+      if (json[i].filter(c => c !== '').length >= 3) { headerRowIdx = i; break; }
+    }
+
+    headers = json[headerRowIdx].map(h => String(h).trim());
+    originalRows = [];
+    for (let i = headerRowIdx + 1; i < json.length; i++) {
+      const row = json[i];
+      if (row.every(c => c === '' || c === null || c === undefined)) continue;
+      const obj = {};
+      headers.forEach((h, idx) => { obj[h] = row[idx]; });
+      originalRows.push(obj);
+    }
+
+    // Auto map columns
+    autoMapColumns();
+
+    document.getElementById('actionSection').classList.remove('hidden');
+    document.getElementById('resultSection').classList.add('hidden');
+    document.getElementById('resultSummary').classList.add('hidden');
+    document.getElementById('downloadBtn').classList.add('hidden');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function autoMapColumns() {
+  colIndex = {};
+  const aliases = {
+    asin: ['asin'], sku: ['sku', 'fnsku'], code: ['编码'],
+    sales30: ['近30天销量', '30天销量', '月销量'],
+    available: ['可售库存', '库存', '可用库存'],
+    unshipped: ['未出货订单', '未出货', '在途'],
+    weekShip: ['本周要出库库存', '本周要出', '本周出库'],
+    seaSup: ['海运补单', '海运补'], seaOrder: ['海运下单', '下单'],
+    date: ['日期', '出货日期'], remark: ['备注', '说明']
+  };
+  for (const [key, alts] of Object.entries(aliases)) {
+    for (const a of alts) {
+      const idx = headers.findIndex(h => h.includes(a));
+      if (idx >= 0) { colIndex[key] = headers[idx]; break; }
+    }
+  }
+}
+
+// ==================== Calculation ====================
+document.getElementById('calcBtn').addEventListener('click', () => {
+  if (!originalRows.length) return;
+
+  originalRows.forEach(row => {
+    const asin = row[colIndex.asin] || '';
+    const sku = row[colIndex.sku] || '';
+    const code = row[colIndex.code] || '';
+    const sales30 = parseNum(row[colIndex.sales30]);
+    const available = parseNum(row[colIndex.available]);
+    const unshipped = parseNum(row[colIndex.unshipped]);
+    const weekShip = parseNum(row[colIndex.weekShip]);
+    const originalRemark = String(row[colIndex.remark] || '');
+
+    const dailySales = sales30 / 30;
+    const totalInv = available + unshipped;
+    const excessThreshold = sales30 * 5;
+    const isExcess = totalInv > excessThreshold && sales30 > 0;
+    const excessQty = isExcess ? Math.round(totalInv - excessThreshold) : 0;
+
+    const isDeep = sales30 > 600;
+    const targetStock = isDeep ? Math.round(dailySales * 120) : Math.round(dailySales * 60);
+    const suggestRestock = Math.max(0, targetStock - totalInv);
+
+    const pType = detectProductType(sku, code);
+
+    // L: 海运补单 (负数需补单/正数多余)
+    if (isExcess) {
+      row[colIndex.seaSup] = excessQty; // positive = excess
+    } else if (suggestRestock > 0) {
+      row[colIndex.seaSup] = -suggestRestock; // negative = need restock
+    } else {
+      row[colIndex.seaSup] = 0;
+    }
+
+    // N: 海运下单
+    let shipQty = weekShip;
+    if (isExcess && shipQty > 0) {
+      shipQty = Math.min(shipQty, excessQty);
+    }
+    if (shipQty > 0) {
+      shipQty = Math.ceil(shipQty / pType.qty) * pType.qty;
+    }
+    row[colIndex.seaOrder] = shipQty > 0 ? shipQty : '';
+
+    // O: 日期
+    row[colIndex.date] = shipQty > 0 ? getNextFriday() : '';
+
+    // P: 备注
+    let remarks = [];
+    if (originalRemark && originalRemark !== 'undefined') remarks.push(originalRemark);
+    if (isExcess) remarks.push(`充公${excessQty}个转其他团队`);
+    if (shipQty > 0) {
+      const boxes = Math.ceil(shipQty / pType.qty);
+      remarks.push(`${pType.name} ${boxes}箱×${pType.qty}个`);
+    }
+    if (suggestRestock > 0 && !isExcess) {
+      const boxes = Math.ceil(suggestRestock / pType.qty);
+      remarks.push(`建议补货${suggestRestock}个(${boxes}箱×${pType.qty})`);
+    }
+    row[colIndex.remark] = remarks.join(' | ');
+
+    // Metadata for styling
+    row._isExcess = isExcess;
+    row._isRestock = suggestRestock > 0 && !isExcess;
+    row._isDeep = isDeep;
+  });
+
+  renderPreview();
+  updateSummary();
+  document.getElementById('resultSection').classList.remove('hidden');
+  document.getElementById('resultSummary').classList.remove('hidden');
+  document.getElementById('downloadBtn').classList.remove('hidden');
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('resultSection').classList.add('hidden');
+  document.getElementById('resultSummary').classList.add('hidden');
+  document.getElementById('downloadBtn').classList.add('hidden');
+});
+
+function renderPreview() {
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = '';
+
+  originalRows.forEach((row, rIdx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b hover:bg-gray-50';
+
+    if (row._isExcess) tr.classList.add('cell-excess');
+    else if (row._isRestock) tr.classList.add('cell-restock');
+
+    const cells = [
+      { h: colIndex.asin, cls: 'font-mono text-xs' },
+      { h: colIndex.sku, cls: '' },
+      { h: colIndex.sales30, cls: 'text-right' },
+      { h: colIndex.available, cls: 'text-right' },
+      { h: colIndex.unshipped, cls: 'text-right' },
+      { h: colIndex.weekShip, cls: 'text-right' },
+      { h: colIndex.seaSup, cls: 'text-right font-bold' },
+      { h: colIndex.seaOrder, cls: 'text-right font-bold' },
+      { h: colIndex.date, cls: '' },
+      { h: colIndex.remark, cls: 'text-xs max-w-[200px] truncate' }
+    ];
+
+    cells.forEach(({ h, cls }) => {
+      const td = document.createElement('td');
+      td.className = `px-2 py-1 ${cls}`;
+      const val = row[h];
+      td.textContent = val !== undefined && val !== null ? val : '';
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+function updateSummary() {
+  document.getElementById('totalAsins').textContent = originalRows.length;
+  document.getElementById('needRestockCount').textContent = originalRows.filter(d => d._isRestock).length;
+  document.getElementById('needShipCount').textContent = originalRows.filter(d => parseNum(d[colIndex.seaOrder]) > 0).length;
+  document.getElementById('excessCount').textContent = originalRows.filter(d => d._isExcess).length;
+  document.getElementById('deepStockCount').textContent = originalRows.filter(d => d._isDeep).length;
+}
+
+// ==================== Download ====================
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  if (!workbook) return;
+
+  // Rebuild the sheet from original data with filled values
+  const ws = workbook.Sheets[sheetName];
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  // Find column indices by letter
+  const colLetters = {};
+  for (let C = range.s.c; C <= range.e.c; C++) {
+    const cell = ws[XLSX.utils.encode_cell({ r: headerRowIdx, c: C })];
+    if (cell && cell.v) {
+      const header = String(cell.v).trim();
+      colLetters[header] = C;
+    }
+  }
+
+  // Write filled values back to cells
+  originalRows.forEach((row, rIdx) => {
+    const excelRow = headerRowIdx + 1 + rIdx;
+
+    // L: 海运补单
+    if (colIndex.seaSup && colLetters[colIndex.seaSup] !== undefined) {
+      const addr = XLSX.utils.encode_cell({ r: excelRow, c: colLetters[colIndex.seaSup] });
+      ws[addr] = { v: row[colIndex.seaSup], t: typeof row[colIndex.seaSup] === 'number' ? 'n' : 's' };
+    }
+    // N: 海运下单
+    if (colIndex.seaOrder && colLetters[colIndex.seaOrder] !== undefined) {
+      const addr = XLSX.utils.encode_cell({ r: excelRow, c: colLetters[colIndex.seaOrder] });
+      ws[addr] = { v: row[colIndex.seaOrder], t: typeof row[colIndex.seaOrder] === 'number' ? 'n' : 's' };
+    }
+    // O: 日期
+    if (colIndex.date && colLetters[colIndex.date] !== undefined) {
+      const addr = XLSX.utils.encode_cell({ r: excelRow, c: colLetters[colIndex.date] });
+      ws[addr] = { v: row[colIndex.date], t: 's' };
+    }
+    // P: 备注
+    if (colIndex.remark && colLetters[colIndex.remark] !== undefined) {
+      const addr = XLSX.utils.encode_cell({ r: excelRow, c: colLetters[colIndex.remark] });
+      ws[addr] = { v: row[colIndex.remark], t: 's' };
+    }
+  });
+
+  XLSX.writeFile(workbook, `ASIN库存总结表_已填充_${getTodayStr()}.xlsx`);
+});
+
+</script>
+</body>
+</html>
