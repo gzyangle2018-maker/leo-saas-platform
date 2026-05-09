@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="RedDrama - Watch English short dramas with bilingual subtitles">
+<title>RedDrama - 英文短剧</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+#app{width:100%;height:100%;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+
+/* ===== Page System ===== */
+.page{position:absolute;top:0;left:0;width:100%;height:100%;overflow-y:auto;overflow-x:hidden;background:#0a0a0a;display:none;flex-direction:column}
+.page.active{display:flex}
+.page::-webkit-scrollbar{display:none}
+
+/* ===== Loading Screen ===== */
+#loading-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#1a0a0a,#0a0a0a);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#loading-screen .logo{font-size:48px;margin-bottom:16px;animation:pulse 1.5s ease-in-out infinite}
+#loading-screen .title{font-size:24px;font-weight:700;background:linear-gradient(90deg,#ff2d55,#ff9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+#loading-screen .subtitle{font-size:13px;color:#888}
+#loading-screen .progress-bar{width:200px;height:3px;background:#333;border-radius:2px;margin-top:20px;overflow:hidden}
+#loading-screen .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#ff2d55,#ff9500);border-radius:2px;transition:width .3s}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+
+/* ===== Tab Bar ===== */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;height:calc(56px + env(safe-area-inset-bottom));background:rgba(10,10,10,.92);backdrop-filter:blur(20px);border-top:1px solid #222;display:flex;justify-content:space-around;align-items:center;padding-bottom:env(safe-area-inset-bottom);z-index:1000}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:56px;gap:3px;cursor:pointer;transition:all .2s}
+.tab-item .tab-icon{font-size:22px;opacity:.5;transition:all .2s}
+.tab-item .tab-label{font-size:10px;color:#888;transition:all .2s}
+.tab-item.active .tab-icon{opacity:1}
+.tab-item.active .tab-label{color:#ff2d55}
+.tab-item.active .tab-icon{filter:drop-shadow(0 0 6px rgba(255,45,85,.5))}
+
+/* ===== Home Page ===== */
+#home-page{padding-bottom:80px}
+.home-header{padding:12px 16px 8px;display:flex;align-items:center;gap:12px;position:sticky;top:0;background:rgba(10,10,10,.95);backdrop-filter:blur(10px);z-index:100}
+.home-logo{font-size:20px;font-weight:700;background:linear-gradient(90deg,#ff2d55,#ff9500);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.home-search{flex:1;height:36px;background:#1c1c1e;border-radius:18px;display:flex;align-items:center;padding:0 14px;gap:6px;color:#666;font-size:13px}
+.home-search input{background:transparent;border:none;outline:none;color:#fff;font-size:13px;width:100%}
+.home-coins{display:flex;align-items:center;gap:4px;background:linear-gradient(90deg,#ff9500,#ff2d55);padding:4px 10px;border-radius:14px;font-size:12px;font-weight:600}
+
+.category-scroll{display:flex;gap:8px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+.category-scroll::-webkit-scrollbar{display:none}
+.category-chip{white-space:nowrap;padding:6px 14px;background:#1c1c1e;border-radius:16px;font-size:13px;color:#ccc;cursor:pointer;transition:all .2s;border:1px solid transparent}
+.category-chip.active{background:rgba(255,45,85,.15);color:#ff2d55;border-color:rgba(255,45,85,.3)}
+
+.section-title{padding:16px 16px 8px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px}
+.section-title .more{margin-left:auto;font-size:12px;color:#888;font-weight:400}
+
+/* Drama Grid */
+.drama-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px 16px}
+.drama-card{position:relative;border-radius:8px;overflow:hidden;background:#1c1c1e;cursor:pointer;transition:transform .2s}
+.drama-card:active{transform:scale(.96)}
+.drama-card .poster{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
+.drama-card .overlay{position:absolute;bottom:0;left:0;right:0;padding:20px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.drama-card .title{font-size:11px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.drama-card .meta{font-size:10px;color:#aaa;margin-top:2px}
+.drama-card .badge{position:absolute;top:4px;left:4px;background:rgba(255,45,85,.9);padding:2px 5px;border-radius:4px;font-size:9px;font-weight:700}
+.drama-card .hot-badge{position:absolute;top:4px;right:4px;background:rgba(255,149,0,.9);padding:2px 5px;border-radius:4px;font-size:9px;font-weight:700}
+
+/* ===== Player Page ===== */
+#player-page{z-index:2000;background:#000}
+#player-page .player-container{width:100%;height:100%;position:relative;overflow:hidden}
+#video-element{width:100%;height:100%;object-fit:cover;background:#000}
+
+/* Player Controls Overlay */
+.player-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);pointer-events:none;z-index:10}
+.player-overlay>*{pointer-events:auto}
+.player-overlay.hidden{opacity:0;pointer-events:none;transition:opacity .5s}
+
+.player-top{display:flex;align-items:center;gap:8px;padding:12px 16px;background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.player-back{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.player-series-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-more{width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+
+.player-center{flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 8px}
+.player-prev,.player-next{width:50px;height:80px;display:flex;align-items:center;justify-content:center;font-size:32px;opacity:.6;cursor:pointer}
+.player-play-btn{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:40px;opacity:.8;cursor:pointer}
+
+.player-bottom{padding:0 16px 20px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.player-episode-info{margin-bottom:8px}
+.player-episode-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.player-episode-desc{font-size:11px;color:#ccc}
+
+/* Progress Bar */
+.player-progress-area{margin-bottom:12px}
+.player-progress-bar{height:3px;background:rgba(255,255,255,.2);border-radius:2px;position:relative;cursor:pointer}
+.player-progress-fill{height:100%;background:#ff2d55;border-radius:2px;width:0%;position:relative}
+.player-progress-handle{position:absolute;right:-6px;top:50%;transform:translateY(-50%);width:12px;height:12px;background:#fff;border-radius:50%;box-shadow:0 0 6px rgba(0,0,0,.5)}
+.player-time{display:flex;justify-content:space-between;font-size:10px;color:#aaa;margin-top:4px}
+
+/* Player Actions */
+.player-actions{display:flex;justify-content:space-around;align-items:center;padding:8px 0}
+.player-action{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.player-action .icon{font-size:22px}
+.player-action .label{font-size:10px;color:#ccc}
+.player-action.active .icon{color:#ff2d55}
+
+/* Subtitles */
+.subtitle-box{position:absolute;bottom:140px;left:0;width:100%;text-align:center;padding:0 20px;pointer-events:none;z-index:11}
+.subtitle-en{font-size:15px;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.9);margin-bottom:4px;opacity:0;transition:opacity .3s}
+.subtitle-cn{font-size:13px;color:#ffddaa;text-shadow:0 1px 4px rgba(0,0,0,.9);opacity:0;transition:opacity .3s}
+.subtitle-box.show .subtitle-en,.subtitle-box.show .subtitle-cn{opacity:1}
+
+/* Episode Drawer */
+.episode-drawer{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;max-height:60%;background:#1c1c1e;border-radius:16px 16px 0 0;z-index:3000;transition:transform .3s ease;display:flex;flex-direction:column}
+.episode-drawer.open{transform:translateX(-50%) translateY(0)}
+.drawer-header{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333}
+.drawer-title{font-size:16px;font-weight:700}
+.drawer-close{font-size:20px;cursor:pointer}
+.drawer-scroll{flex:1;overflow-y:auto;padding:12px 16px}
+.episode-list{display:flex;flex-direction:column;gap:8px}
+.episode-item{display:flex;align-items:center;gap:12px;padding:10px;background:#2c2c2e;border-radius:10px;cursor:pointer;transition:all .2s}
+.episode-item.active{background:rgba(255,45,85,.15);border:1px solid rgba(255,45,85,.3)}
+.episode-item .ep-thumb{width:80px;height:50px;border-radius:6px;object-fit:cover;background:#333}
+.episode-item .ep-info{flex:1}
+.episode-item .ep-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.episode-item .ep-duration{font-size:11px;color:#888}
+.episode-item .ep-status{font-size:11px;color:#ff2d55}
+
+/* ===== Detail Page ===== */
+#detail-page{padding-bottom:80px}
+.detail-cover{width:100%;aspect-ratio:16/9;object-fit:cover}
+.detail-info{padding:16px}
+.detail-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.detail-meta{display:flex;gap:12px;font-size:12px;color:#888;margin-bottom:10px;flex-wrap:wrap}
+.detail-meta span{display:flex;align-items:center;gap:3px}
+.detail-desc{font-size:13px;color:#bbb;line-height:1.6;margin-bottom:16px}
+.detail-actions{display:flex;gap:10px;margin-bottom:16px}
+.detail-btn{flex:1;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;border:none}
+.detail-btn.primary{background:linear-gradient(90deg,#ff2d55,#ff9500);color:#fff}
+.detail-btn.secondary{background:#2c2c2e;color:#fff}
+.detail-btn:active{transform:scale(.97)}
+
+/* ===== Bookshelf Page ===== */
+#bookshelf-page{padding-bottom:80px}
+.bookshelf-tabs{display:flex;padding:12px 16px 0;gap:16px;border-bottom:1px solid #222}
+.bookshelf-tab{padding-bottom:10px;font-size:14px;color:#888;cursor:pointer;position:relative}
+.bookshelf-tab.active{color:#fff;font-weight:600}
+.bookshelf-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#ff2d55,#ff9500);border-radius:1px}
+.bookshelf-content{padding:16px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center}
+.empty-state .icon{font-size:48px;margin-bottom:12px;opacity:.3}
+.empty-state .text{font-size:14px;color:#666}
+
+/* ===== Profile Page ===== */
+#profile-page{padding-bottom:80px}
+.profile-header{padding:40px 20px 20px;text-align:center;background:linear-gradient(180deg,#1a0a0a,#0a0a0a)}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#ff2d55,#ff9500);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 10px}
+.profile-name{font-size:18px;font-weight:700}
+.profile-id{font-size:12px;color:#888;margin-top:4px}
+
+.profile-stats{display:flex;justify-content:space-around;padding:16px 0;border-bottom:1px solid #222}
+.profile-stat{text-align:center}
+.profile-stat .num{font-size:20px;font-weight:700;color:#ff2d55}
+.profile-stat .label{font-size:11px;color:#888;margin-top:2px}
+
+.profile-menu{padding:8px 0}
+.menu-item{display:flex;align-items:center;padding:14px 20px;gap:12px;cursor:pointer}
+.menu-item:active{background:rgba(255,255,255,.05)}
+.menu-item .menu-icon{font-size:20px;width:28px;text-align:center}
+.menu-item .menu-text{flex:1;font-size:14px}
+.menu-item .menu-arrow{color:#666;font-size:14px}
+
+/* ===== Share Modal ===== */
+.share-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:4000;display:none;align-items:flex-end;justify-content:center}
+.share-modal.show{display:flex}
+.share-sheet{width:100%;max-width:480px;background:#1c1c1e;border-radius:20px 20px 0 0;padding:20px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.share-title{text-align:center;font-size:16px;font-weight:700;margin-bottom:16px}
+.share-options{display:flex;justify-content:space-around;margin-bottom:20px}
+.share-option{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.share-option .share-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px}
+.share-option .share-label{font-size:11px;color:#ccc}
+.share-cancel{width:100%;height:44px;border-radius:22px;background:#2c2c2e;border:none;color:#fff;font-size:15px;cursor:pointer;margin-top:8px}
+
+/* ===== Toast ===== */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.85);color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;z-index:5000;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ===== Animations ===== */
+.fade-in{animation:fadeIn .3s ease}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.slide-up{animation:slideUp .3s ease}
+
+/* Drawer backdrop */
+.drawer-backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:2500;display:none}
+.drawer-backdrop.show{display:block}
+
+/* Speed menu */
+.speed-menu{position:absolute;bottom:70px;right:16px;background:rgba(0,0,0,.9);border-radius:8px;padding:4px;z-index:20;display:none}
+.speed-menu.show{display:block}
+.speed-item{padding:8px 16px;font-size:13px;color:#ccc;cursor:pointer;border-radius:4px}
+.speed-item.active{color:#ff2d55;font-weight:600}
+.speed-item:active{background:rgba(255,255,255,.1)}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Loading -->
+  <div id="loading-screen">
+    <div class="logo">🎬</div>
+    <div class="title">RedDrama</div>
+    <div class="subtitle">英文短剧 · 双语字幕</div>
+    <div class="progress-bar"><div class="progress-fill" id="loading-fill"></div></div>
+  </div>
+
+  <!-- Pages -->
+  <div id="home-page" class="page"></div>
+  <div id="player-page" class="page"></div>
+  <div id="detail-page" class="page"></div>
+  <div id="bookshelf-page" class="page"></div>
+  <div id="profile-page" class="page"></div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar" id="tab-bar">
+    <div class="tab-item active" data-page="home">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
+    </div>
+    <div class="tab-item" data-page="bookshelf">
+      <span class="tab-icon">📚</span>
+      <span class="tab-label">书架</span>
+    </div>
+    <div class="tab-item" data-page="profile">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">我的</span>
+    </div>
+  </div>
+
+  <!-- Episode Drawer -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+  <div class="episode-drawer" id="episode-drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">选集</span>
+      <span class="drawer-close" onclick="app.closeDrawer()">✕</span>
+    </div>
+    <div class="drawer-scroll">
+      <div class="episode-list" id="episode-list"></div>
+    </div>
+  </div>
+
+  <!-- Share Modal -->
+  <div class="share-modal" id="share-modal" onclick="app.closeShare(event)">
+    <div class="share-sheet" onclick="event.stopPropagation()">
+      <div class="share-title">分享到</div>
+      <div class="share-options">
+        <div class="share-option" onclick="app.shareTo('wechat')">
+          <div class="share-icon" style="background:#07c160">💬</div>
+          <span class="share-label">微信好友</span>
+        </div>
+        <div class="share-option" onclick="app.shareTo('timeline')">
+          <div class="share-icon" style="background:#07c160">📱</div>
+          <span class="share-label">朋友圈</span>
+        </div>
+        <div class="share-option" onclick="app.shareTo('copy')">
+          <div class="share-icon" style="background:#2c2c2e">🔗</div>
+          <span class="share-label">复制链接</span>
+        </div>
+      </div>
+      <button class="share-cancel" onclick="app.closeShare()">取消</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===== DATA =====
+const DRAMA_DATA=[
+  {
+    id:1,title:"The Unexpected Roommate",category:"comedy",cover:"https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=533&fit=crop",
+    desc:"A hilarious story about two strangers forced to become roommates in New York City. Watch as they navigate cultural differences and unexpected romance.",
+    tags:["Comedy","Romance","Urban"],year:2024,episodes:[
+      {id:101,title:"EP1: Moving In",duration:"02:15",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        subtitles:[
+          {s:0,e:4,en:"Hey! You're in my room!",cn:"嘿！你在我的房间里！"},
+          {s:4.5,e:8,en:"This is 4B, right? I signed the lease yesterday.",cn:"这是4B对吧？我昨天签了租约。"},
+          {s:8.5,e:12,en:"Wait... you mean we're sharing this apartment?",cn:"等等……你是说我们要合租这套公寓？"},
+          {s:12.5,e:16,en:"Looks like it. I'm Alex, by the way.",cn:"看来是的。顺便说一下，我是艾利克斯。"},
+          {s:16.5,e:20,en:"I'm Sophie. And this is going to be interesting.",cn:"我是索菲。这下有意思了。"},
+          {s:20.5,e:25,en:"Trust me, I've had worse roommates.",cn:"相信我，我遇到过更糟糕的室友。"},
+          {s:25.5,e:30,en:"That's not comforting at all!",cn:"这一点都不让人放心！"}
+        ]},
+      {id:102,title:"EP2: House Rules",duration:"02:30",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+        subtitles:[
+          {s:0,e:5,en:"Rule number one: No shoes in the house.",cn:"第一条规定：室内禁止穿鞋。"},
+          {s:5.5,e:9,en:"Seriously? But I have so many cute sneakers!",cn:"真的吗？可我有很多可爱的运动鞋！"},
+          {s:9.5,e:14,en:"Rule two: The bathroom is mine from 7 to 8 AM.",cn:"第二条：早上7点到8点浴室归我用。"},
+          {s:14.5,e:18,en:"That's when I need to get ready for work!",cn:"那是我准备上班的时间！"},
+          {s:18.5,e:23,en:"Then wake up at 6. Compromise is key.",cn:"那就6点起床。妥协是关键。"},
+          {s:23.5,e:28,en:"This is going to be a long year...",cn:"这一年将会很漫长……"}
+        ]},
+      {id:103,title:"EP3: The Dinner Date",duration:"02:45",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+        subtitles:[
+          {s:0,e:5,en:"Is that... a dinner plate for two?",cn:"那是……双人晚餐的盘子？"},
+          {s:5.5,e:9,en:"My date cancelled. Want to join?",cn:"我的约会取消了。要一起吗？"},
+          {s:9.5,e:13,en:"Are you asking me on a date?",cn:"你是在约我出去吗？"},
+          {s:13.5,e:17,en:"No! I just... hate wasting food.",cn:"不是！我只是……讨厌浪费食物。"},
+          {s:17.5,e:22,en:"Sure. But this doesn't count as a date.",cn:"好吧。但这不算约会。"},
+          {s:22.5,e:26,en:"Definitely not. Just two roommates eating.",cn:"当然不算。只是两个室友一起吃饭。"}
+        ]}
+    ]},
+  {
+    id:2,title:"Love in Paris",category:"romance",cover:"https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=533&fit=crop",
+    desc:"An American photographer meets a French chef in Paris. Language barriers, cultural clashes, and undeniable chemistry create the perfect recipe for love.",
+    tags:["Romance","Drama","Travel"],year:2024,episodes:[
+      {id:201,title:"EP1: Lost in Translation",duration:"02:20",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+        subtitles:[
+          {s:0,e:4,en:"Excusez-moi, où est la Tour Eiffel?",cn:"打扰一下，埃菲尔铁塔在哪里？"},
+          {s:4.5,e:8,en:"You speak English? Thank goodness!",cn:"你说英语？谢天谢地！"},
+          {s:8.5,e:12,en:"I was trying to ask for directions.",cn:"我在问路。"},
+          {s:12.5,e:16,en:"You're going the wrong way. I'm Jean.",cn:"你走错方向了。我叫让。"},
+          {s:16.5,e:20,en:"Emma. And I am completely lost.",cn:"艾玛。我完全迷路了。"},
+          {s:20.5,e:25,en:"Let me show you Paris, Emma.",cn:"让我带你游览巴黎吧，艾玛。"}
+        ]},
+      {id:202,title:"EP2: The Chef's Kiss",duration:"02:35",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        subtitles:[
+          {s:0,e:4,en:"This is my restaurant. Tiny, but mine.",cn:"这是我的餐厅。很小，但是我的。"},
+          {s:4.5,e:9,en:"Jean, this is incredible! The smell alone...",cn:"让，太不可思议了！光是这香味……"},
+          {s:9.5,e:14,en:"You haven't even tasted the coq au vin yet.",cn:"你还没尝过红酒炖鸡呢。"},
+          {s:14.5,e:18,en:"Teach me. I want to learn French cooking.",cn:"教我吧。我想学法国菜。"},
+          {s:18.5,e:23,en:"It takes years to master, Emma.",cn:"这需要多年才能掌握，艾玛。"},
+          {s:23.5,e:28,en:"Then I'll stay in Paris longer.",cn:"那我就在巴黎多待一段时间。"}
+        ]},
+      {id:203,title:"EP3: Rainy Goodbye",duration:"02:50",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        subtitles:[
+          {s:0,e:5,en:"My flight leaves tomorrow morning.",cn:"我的航班明天早上起飞。"},
+          {s:5.5,e:9,en:"Three weeks went by so fast.",cn:"三周过得太快了。"},
+          {s:9.5,e:14,en:"Jean, I think I'm falling for you.",cn:"让，我觉得我爱上你了。"},
+          {s:14.5,e:18,en:"Then don't go. Stay here with me.",cn:"那就别走。留在这里陪我。"},
+          {s:18.5,e:23,en:"I have a life back in New York...",cn:"我在纽约有自己的生活……"},
+          {s:23.5,e:28,en:"And I have a life here. Choose, Emma.",cn:"而我这里有我的生活。做出选择吧，艾玛。"}
+        ]}
+    ]},
+  {
+    id:3,title:"CEO's Secret",category:"workplace",cover:"https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=533&fit=crop",
+    desc:"A junior executive discovers her CEO's biggest secret and must decide between loyalty and ambition in this thrilling corporate drama.",
+    tags:["Drama","Thriller","Business"],year:2024,episodes:[
+      {id:301,title:"EP1: The New Job",duration:"02:10",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+        subtitles:[
+          {s:0,e:4,en:"Welcome to Chen Industries, Miss Liu.",cn:"欢迎来到陈氏集团，刘小姐。"},
+          {s:4.5,e:8,en:"Thank you. I'm excited to start.",cn:"谢谢。我很兴奋能开始工作。"},
+          {s:8.5,e:12,en:"Mr. Chen doesn't usually meet junior staff.",cn:"陈先生通常不见初级员工。"},
+          {s:12.5,e:16,en:"He wants to see me? Now?",cn:"他想见我？现在？"},
+          {s:16.5,e:20,en:"He's waiting in his office. Floor 88.",cn:"他在办公室等。88楼。"},
+          {s:20.5,e:25,en:"This is either very good or very bad.",cn:"这要么很好，要么很糟糕。"}
+        ]},
+      {id:302,title:"EP2: The Folder",duration:"02:40",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+        subtitles:[
+          {s:0,e:5,en:"Why is there a folder labeled 'DESTROY' on his desk?",cn:"为什么他的桌上有个标着'销毁'的文件夹？"},
+          {s:5.5,e:9,en:"You shouldn't be looking at that, Amy.",cn:"你不应该看那个，艾米。"},
+          {s:9.5,e:14,en:"It says 'Project Phoenix - Illegal Transfer'.",cn:"上面写着'凤凰计划 - 非法转账'。"},
+          {s:14.5,e:18,en:"Put it down. Forget you saw anything.",cn:"放下它。忘了你看到的一切。"},
+          {s:18.5,e:23,en:"Mr. Chen, this is evidence of a crime!",cn:"陈先生，这是犯罪证据！"},
+          {s:23.5,e:28,en:"And you're now part of it. Welcome to the top.",cn:"而你现在也是其中一员了。欢迎来到顶层。"}
+        ]}
+    ]},
+  {
+    id:4,title:"Campus Crush",category:"youth",cover:"https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=533&fit=crop",
+    desc:"Two rival students at an elite university discover they have more in common than they thought. A sweet campus romance with a twist.",
+    tags:["Youth","Romance","School"],year:2024,episodes:[
+      {id:401,title:"EP1: The Debate",duration:"02:25",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+        subtitles:[
+          {s:0,e:4,en:"Your argument is fundamentally flawed, Jake.",cn:"你的论点从根本上就是错的，杰克。"},
+          {s:4.5,e:8,en:"Oh please, Lily. You just hate losing.",cn:"得了吧，莉莉。你只是讨厌输。"},
+          {s:8.5,e:12,en:"I never lose. Especially not to you.",cn:"我从不输。特别是不会输给你。"},
+          {s:12.5,e:16,en:"Then prove it. Study session tonight?",cn:"那就证明给我看。今晚学习会？"},
+          {s:16.5,e:20,en:"Are you asking me out?",cn:"你是在约我吗？"},
+          {s:20.5,e:25,en:"I'm asking for academic competition. Nothing more.",cn:"我在邀请学术竞争。没别的意思。"}
+        ]}
+    ]},
+  {
+    id:5,title:"Royal Scandal",category:"period",cover:"https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=533&fit=crop",
+    desc:"In a fictional European kingdom, a commoner maid catches the prince's eye, setting off a scandal that threatens the monarchy.",
+    tags:["Period","Romance","Drama"],year:2024,episodes:[
+      {id:501,title:"EP1: The Ball",duration:"02:30",video:"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+        subtitles:[
+          {s:0,e:4,en:"You shouldn't be here, girl. This is the royal ball.",cn:"你不该在这里，姑娘。这是皇家舞会。"},
+          {s:4.5,e:8,en:"I'm replacing the sick maid, Your Highness.",cn:"我在代替生病的侍女，殿下。"},
+          {s:8.5,e:12,en:"What's your name?",cn:"你叫什么名字？"},
+          {s:12.5,e:16,en:"Clara, son of... no one important.",cn:"克拉拉，……不重要的人的女儿。"},
+          {s:16.5,e:21,en:"Dance with me, Clara. Just one dance.",cn:"和我跳支舞吧，克拉拉。就一支。"},
+          {s:21.5,e:26,en:"The King will have my head!",cn:"国王会要了我的脑袋的！"}
+        ]}
+    ]}
+];
+
+const CATEGORIES=[{id:'all',name:'全部'},{id:'comedy',name:'喜剧'},{id:'romance',name:'爱情'},{id:'workplace',name:'职场'},{id:'youth',name:'青春'},{id:'period',name:'古装'}];
+
+// ===== APP =====
+class RedDramaApp{
+  constructor(){
+    this.currentPage='home';
+    this.currentDrama=null;
+    this.currentEpisode=null;
+    this.video=null;
+    this.isPlaying=false;
+    this.showControls=true;
+    this.subtitleMode='both';
+    this.ttsEnabled=false;
+    this.playbackRate=1;
+    this.controlsTimer=null;
+    this.history=this.load('history')||[];
+    this.favorites=this.load('favorites')||[];
+    this.progress=this.load('progress')||{};
+    this.init();
+  }
+
+  init(){
+    this.setupPages();
+    this.setupTabs();
+    this.setupPlayerGestures();
+    setTimeout(()=>this.hideLoading(),800);
+  }
+
+  save(key,data){localStorage.setItem('reddrama_'+key,JSON.stringify(data))}
+  load(key){try{return JSON.parse(localStorage.getItem('reddrama_'+key))}catch(e){return null}}
+
+  hideLoading(){
+    const fill=document.getElementById('loading-fill');
+    fill.style.width='100%';
+    setTimeout(()=>{document.getElementById('loading-screen').style.display='none'},400);
+  }
+
+  toast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg;t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2000);
+  }
+
+  // ===== PAGE SYSTEM =====
+  setupPages(){
+    this.renderHome();
+    this.renderBookshelf();
+    this.renderProfile();
+  }
+
+  switchPage(page){
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    const target=document.getElementById(page+'-page');
+    if(target){target.classList.add('active');target.scrollTop=0}
+    this.currentPage=page;
+    if(page==='bookshelf')this.renderBookshelf();
+    document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active',t.dataset.page===page));
+    if(page!=='player' && this.video){this.video.pause();this.isPlaying=false}
+  }
+
+  setupTabs(){
+    document.querySelectorAll('.tab-item').forEach(tab=>{
+      tab.addEventListener('click',()=>this.switchPage(tab.dataset.page));
+    });
+  }
+
+  // ===== HOME =====
+  renderHome(){
+    const page=document.getElementById('home-page');
+    let html=`
+      <div class="home-header">
+        <span class="home-logo">RedDrama</span>
+        <div class="home-search" onclick="app.toast('搜索功能开发中')">
+          <span>🔍</span>
+          <input type="text" placeholder="搜索短剧、演员..." readonly>
+        </div>
+        <div class="home-coins">🪙 0</div>
+      </div>
+      <div class="category-scroll">
+        ${CATEGORIES.map(c=>`<span class="category-chip ${c.id==='all'?'active':''}" data-cat="${c.id}" onclick="app.filterCategory('${c.id}')">${c.name}</span>`).join('')}
+      </div>
+      <div class="section-title">🔥 热门推荐 <span class="more">更多 ></span></div>
+      <div class="drama-grid" id="drama-grid">
+        ${DRAMA_DATA.map(d=>this.dramaCard(d)).join('')}
+      </div>
+      <div class="section-title">⭐ 新剧上线 <span class="more">更多 ></span></div>
+      <div class="drama-grid">
+        ${DRAMA_DATA.slice().reverse().map(d=>this.dramaCard(d)).join('')}
+      </div>
+    `;
+    page.innerHTML=html;
+  }
+
+  dramaCard(d){
+    const eps=d.episodes.length;
+    const isFav=this.favorites.includes(d.id);
+    return `
+      <div class="drama-card" onclick="app.openPlayer(${d.id},${d.episodes[0].id})">
+        <img class="poster" src="${d.cover}" loading="lazy" alt="${d.title}">
+        <div class="overlay">
+          <div class="title">${d.title}</div>
+          <div class="meta">${eps}集 · ${d.tags[0]}</div>
+        </div>
+        ${eps>=3?'<div class="hot-badge">HOT</div>':'<div class="badge">NEW</div>'}
+      </div>
+    `;
+  }
+
+  filterCategory(cat){
+    document.querySelectorAll('.category-chip').forEach(c=>c.classList.toggle('active',c.dataset.cat===cat));
+    const grid=document.getElementById('drama-grid');
+    const filtered=cat==='all'?DRAMA_DATA:DRAMA_DATA.filter(d=>d.category===cat);
+    grid.innerHTML=filtered.map(d=>this.dramaCard(d)).join('');
+  }
+
+  // ===== PLAYER =====
+  openPlayer(dramaId,episodeId){
+    this.currentDrama=DRAMA_DATA.find(d=>d.id===dramaId);
+    this.currentEpisode=this.currentDrama.episodes.find(e=>e.id===episodeId);
+    if(!this.currentDrama||!this.currentEpisode)return;
+
+    this.addHistory(dramaId,episodeId);
+    this.switchPage('player');
+    this.renderPlayer();
+  }
+
+  renderPlayer(){
+    const page=document.getElementById('player-page');
+    const d=this.currentDrama;const e=this.currentEpisode;
+    const savedProgress=this.progress[e.id]||0;
+
+    page.innerHTML=`
+      <div class="player-container">
+        <video id="video-element" src="${e.video}" playsinline webkit-playsinline preload="metadata"></video>
+        <div class="player-overlay" id="player-overlay">
+          <div class="player-top">
+            <span class="player-back" onclick="app.switchPage('home')">←</span>
+            <span class="player-series-title">${d.title} · ${e.title}</span>
+            <span class="player-more" onclick="app.showShare()">⋮</span>
+          </div>
+          <div class="player-center">
+            <span class="player-prev" onclick="app.prevEpisode()">‹</span>
+            <span class="player-play-btn" id="play-btn" onclick="app.togglePlay()">▶</span>
+            <span class="player-next" onclick="app.nextEpisode()">›</span>
+          </div>
+          <div class="player-bottom">
+            <div class="player-episode-info">
+              <div class="player-episode-title">${e.title}</div>
+              <div class="player-episode-desc">${d.desc.substring(0,60)}...</div>
+            </div>
+            <div class="player-progress-area">
+              <div class="player-progress-bar" onclick="app.seek(event)">
+                <div class="player-progress-fill" id="progress-fill" style="width:0%"><div class="player-progress-handle"></div></div>
+              </div>
+              <div class="player-time"><span id="current-time">00:00</span><span id="total-time">00:00</span></div>
+            </div>
+            <div class="player-actions">
+              <div class="player-action ${this.favorites.includes(d.id)?'active':''}" onclick="app.toggleFav()">
+                <span class="icon">❤️</span><span class="label">收藏</span>
+              </div>
+              <div class="player-action" onclick="app.openDrawer()">
+                <span class="icon">📋</span><span class="label">选集</span>
+              </div>
+              <div class="player-action" onclick="app.toggleTTS()">
+                <span class="icon">🎙️</span><span class="label" id="tts-label">配音关</span>
+              </div>
+              <div class="player-action" onclick="app.toggleSpeedMenu()">
+                <span class="icon">⏩</span><span class="label" id="speed-label">1.0x</span>
+              </div>
+              <div class="player-action" onclick="app.cycleSubtitleMode()">
+                <span class="icon">📝</span><span class="label" id="sub-label">双语</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="subtitle-box" id="subtitle-box">
+          <div class="subtitle-en" id="subtitle-en"></div>
+          <div class="subtitle-cn" id="subtitle-cn"></div>
+        </div>
+        <div class="speed-menu" id="speed-menu">
+          <div class="speed-item ${this.playbackRate==0.5?'active':''}" onclick="app.setSpeed(0.5)">0.5x</div>
+          <div class="speed-item ${this.playbackRate==0.75?'active':''}" onclick="app.setSpeed(0.75)">0.75x</div>
+          <div class="speed-item ${this.playbackRate==1?'active':''}" onclick="app.setSpeed(1)">1.0x</div>
+          <div class="speed-item ${this.playbackRate==1.25?'active':''}" onclick="app.setSpeed(1.25)">1.25x</div>
+          <div class="speed-item ${this.playbackRate==1.5?'active':''}" onclick="app.setSpeed(1.5)">1.5x</div>
+          <div class="speed-item ${this.playbackRate==2?'active':''}" onclick="app.setSpeed(2)">2.0x</div>
+        </div>
+      </div>
+    `;
+
+    this.video=document.getElementById('video-element');
+    this.video.currentTime=savedProgress;
+
+    this.video.addEventListener('loadedmetadata',()=>{
+      document.getElementById('total-time').textContent=this.formatTime(this.video.duration);
+    });
+    this.video.addEventListener('timeupdate',()=>this.onTimeUpdate());
+    this.video.addEventListener('ended',()=>this.onEnded());
+    this.video.addEventListener('click',()=>this.toggleControls());
+
+    setTimeout(()=>this.togglePlay(),300);
+    this.renderEpisodeList();
+  }
+
+  togglePlay(){
+    if(!this.video)return;
+    const btn=document.getElementById('play-btn');
+    if(this.video.paused){this.video.play();this.isPlaying=true;btn.textContent='❚❚';this.hideControlsDelayed()}
+    else{this.video.pause();this.isPlaying=false;btn.textContent='▶';this.showControls()}
+  }
+
+  toggleControls(){
+    const overlay=document.getElementById('player-overlay');
+    if(this.showControls){overlay.classList.add('hidden');this.showControls=false;clearTimeout(this.controlsTimer)}
+    else{overlay.classList.remove('hidden');this.showControls=true;this.hideControlsDelayed()}
+  }
+
+  showControls(){document.getElementById('player-overlay').classList.remove('hidden');this.showControls=true}
+  hideControlsDelayed(){clearTimeout(this.controlsTimer);this.controlsTimer=setTimeout(()=>{if(this.isPlaying){document.getElementById('player-overlay').classList.add('hidden');this.showControls=false}},3000)}
+
+  seek(e){
+    if(!this.video)return;
+    const bar=e.currentTarget;const rect=bar.getBoundingClientRect();
+    const pct=(e.clientX-rect.left)/rect.width;
+    this.video.currentTime=pct*this.video.duration;
+  }
+
+  onTimeUpdate(){
+    if(!this.video)return;
+    const pct=(this.video.currentTime/this.video.duration)*100;
+    document.getElementById('progress-fill').style.width=pct+'%';
+    document.getElementById('current-time').textContent=this.formatTime(this.video.currentTime);
+    this.progress[this.currentEpisode.id]=this.video.currentTime;
+    this.save('progress',this.progress);
+    this.updateSubtitles();
+  }
+
+  onEnded(){
+    this.nextEpisode();
+  }
+
+  formatTime(s){
+    if(!s||isNaN(s))return'00:00';
+    const m=Math.floor(s/60);const sec=Math.floor(s%60);
+    return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  }
+
+  // ===== SUBTITLES =====
+  updateSubtitles(){
+    const t=this.video.currentTime;
+    const subs=this.currentEpisode.subtitles||[];
+    const active=subs.find(s=>t>=s.s&&t<s.e);
+    const box=document.getElementById('subtitle-box');
+    const en=document.getElementById('subtitle-en');
+    const cn=document.getElementById('subtitle-cn');
+
+    if(active){
+      en.textContent=active.en;cn.textContent=active.cn;
+      if(this.subtitleMode==='en'){cn.style.display='none';en.style.display='block'}
+      else if(this.subtitleMode==='cn'){en.style.display='none';cn.style.display='block'}
+      else{en.style.display='block';cn.style.display='block'}
+      box.classList.add('show');
+      if(this.ttsEnabled&&!window.speechSynthesis.speaking){this.speak(active.en)}
+    }else{
+      box.classList.remove('show');
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  cycleSubtitleMode(){
+    const modes=['both','en','cn','off'];
+    const idx=(modes.indexOf(this.subtitleMode)+1)%modes.length;
+    this.subtitleMode=modes[idx];
+    const labels={both:'双语',en:'英文',cn:'中文',off:'关闭'};
+    document.getElementById('sub-label').textContent=labels[this.subtitleMode];
+    this.toast('字幕：'+labels[this.subtitleMode]);
+    this.updateSubtitles();
+  }
+
+  // ===== TTS =====
+  toggleTTS(){
+    this.ttsEnabled=!this.ttsEnabled;
+    document.getElementById('tts-label').textContent=this.ttsEnabled?'配音开':'配音关';
+    this.toast(this.ttsEnabled?'英文配音已开启':'英文配音已关闭');
+    if(!this.ttsEnabled)window.speechSynthesis.cancel();
+  }
+
+  speak(text){
+    if(!this.ttsEnabled||!text)return;
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='en-US';u.rate=this.playbackRate;u.volume=0.8;
+    window.speechSynthesis.speak(u);
+  }
+
+  // ===== SPEED =====
+  toggleSpeedMenu(){
+    document.getElementById('speed-menu').classList.toggle('show');
+  }
+  setSpeed(rate){
+    this.playbackRate=rate;
+    if(this.video)this.video.playbackRate=rate;
+    document.getElementById('speed-label').textContent=rate+'x';
+    document.querySelectorAll('.speed-item').forEach(el=>el.classList.toggle('active',el.textContent===rate+'x'));
+    document.getElementById('speed-menu').classList.remove('show');
+  }
+
+  // ===== EPISODE NAVIGATION =====
+  prevEpisode(){
+    const eps=this.currentDrama.episodes;
+    const idx=eps.findIndex(e=>e.id===this.currentEpisode.id);
+    if(idx>0){this.openPlayer(this.currentDrama.id,eps[idx-1].id)}
+    else{this.toast('已经是第一集了')}
+  }
+
+  nextEpisode(){
+    const eps=this.currentDrama.episodes;
+    const idx=eps.findIndex(e=>e.id===this.currentEpisode.id);
+    if(idx<eps.length-1){this.openPlayer(this.currentDrama.id,eps[idx+1].id)}
+    else{this.toast('已经播完了');this.switchPage('home')}
+  }
+
+  openDrawer(){
+    document.getElementById('drawer-backdrop').classList.add('show');
+    document.getElementById('episode-drawer').classList.add('open');
+    this.showControls();
+  }
+  closeDrawer(){
+    document.getElementById('drawer-backdrop').classList.remove('show');
+    document.getElementById('episode-drawer').classList.remove('open');
+    this.hideControlsDelayed();
+  }
+
+  renderEpisodeList(){
+    const list=document.getElementById('episode-list');
+    if(!list||!this.currentDrama)return;
+    list.innerHTML=this.currentDrama.episodes.map(ep=>`
+      <div class="episode-item ${ep.id===this.currentEpisode.id?'active':''}" onclick="app.switchEpisode(${ep.id})">
+        <img class="ep-thumb" src="${this.currentDrama.cover}" alt="">
+        <div class="ep-info">
+          <div class="ep-title">${ep.title}</div>
+          <div class="ep-duration">⏱ ${ep.duration}</div>
+        </div>
+        ${ep.id===this.currentEpisode.id?'<span class="ep-status">▶ 播放中</span>':''}
+      </div>
+    `).join('');
+  }
+
+  switchEpisode(epId){
+    this.closeDrawer();
+    this.openPlayer(this.currentDrama.id,epId);
+  }
+
+  // ===== GESTURES =====
+  setupPlayerGestures(){
+    let startY=0;
+    const page=document.getElementById('player-page');
+    page.addEventListener('touchstart',e=>{if(e.target.closest('.player-overlay')||e.target.tagName==='VIDEO')startY=e.touches[0].clientY},{passive:true});
+    page.addEventListener('touchend',e=>{
+      const endY=e.changedTouches[0].clientY;
+      const diff=startY-endY;
+      if(Math.abs(diff)>80){
+        if(diff>0)this.nextEpisode();
+        else this.prevEpisode();
+      }
+      startY=0;
+    },{passive:true});
+
+    document.getElementById('drawer-backdrop').addEventListener('click',()=>this.closeDrawer());
+  }
+
+  // ===== HISTORY & FAVORITES =====
+  addHistory(dramaId,episodeId){
+    this.history=this.history.filter(h=>!(h.drama===dramaId&&h.episode===episodeId));
+    this.history.unshift({drama:dramaId,episode:episodeId,time:Date.now()});
+    if(this.history.length>50)this.history=this.history.slice(0,50);
+    this.save('history',this.history);
+  }
+
+  toggleFav(){
+    const idx=this.favorites.indexOf(this.currentDrama.id);
+    if(idx>-1){this.favorites.splice(idx,1);this.toast('已取消收藏')}
+    else{this.favorites.push(this.currentDrama.id);this.toast('已收藏')}
+    this.save('favorites',this.favorites);
+    this.renderPlayer();
+  }
+
+  // ===== BOOKSHELF =====
+  renderBookshelf(){
+    const page=document.getElementById('bookshelf-page');
+    page.innerHTML=`
+      <div class="bookshelf-tabs">
+        <span class="bookshelf-tab active" onclick="app.showBookshelfTab('history',this)">观看历史</span>
+        <span class="bookshelf-tab" onclick="app.showBookshelfTab('favorites',this)">我的收藏</span>
+      </div>
+      <div class="bookshelf-content" id="bookshelf-content">
+        ${this.renderHistoryList()}
+      </div>
+    `;
+  }
+
+  showBookshelfTab(tab,el){
+    document.querySelectorAll('.bookshelf-tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('bookshelf-content').innerHTML=tab==='history'?this.renderHistoryList():this.renderFavoritesList();
+  }
+
+  renderHistoryList(){
+    if(!this.history.length)return this.emptyState('📺','还没有观看记录');
+    const items=this.history.slice(0,20).map(h=>{
+      const d=DRAMA_DATA.find(x=>x.id===h.drama);
+      const e=d?d.episodes.find(x=>x.id===h.episode):null;
+      if(!d||!e)return'';
+      return `
+        <div class="episode-item" onclick="app.openPlayer(${d.id},${e.id})" style="margin-bottom:8px">
+          <img class="ep-thumb" src="${d.cover}" alt="">
+          <div class="ep-info">
+            <div class="ep-title">${d.title}</div>
+            <div class="ep-duration">${e.title}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `<div class="episode-list">${items}</div>`;
+  }
+
+  renderFavoritesList(){
+    if(!this.favorites.length)return this.emptyState('❤️','还没有收藏');
+    const items=this.favorites.map(fid=>{
+      const d=DRAMA_DATA.find(x=>x.id===fid);
+      if(!d)return'';
+      return `
+        <div class="drama-card" onclick="app.openPlayer(${d.id},${d.episodes[0].id})" style="margin-bottom:12px">
+          <img class="poster" src="${d.cover}" alt="${d.title}">
+          <div class="overlay">
+            <div class="title">${d.title}</div>
+            <div class="meta">${d.episodes.length}集 · ${d.tags[0]}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">${items}</div>`;
+  }
+
+  emptyState(icon,text){
+    return `<div class="empty-state"><div class="icon">${icon}</div><div class="text">${text}</div></div>`;
+  }
+
+  // ===== PROFILE =====
+  renderProfile(){
+    const page=document.getElementById('profile-page');
+    const totalWatched=this.history.length;
+    const totalFav=this.favorites.length;
+    page.innerHTML=`
+      <div class="profile-header">
+        <div class="profile-avatar">👤</div>
+        <div class="profile-name">短剧爱好者</div>
+        <div class="profile-id">ID: RD${String(Math.random()).slice(2,10)}</div>
+      </div>
+      <div class="profile-stats">
+        <div class="profile-stat"><div class="num">${totalWatched}</div><div class="label">已看</div></div>
+        <div class="profile-stat"><div class="num">${totalFav}</div><div class="label">收藏</div></div>
+        <div class="profile-stat"><div class="num">${DRAMA_DATA.reduce((a,d)=>a+d.episodes.length,0)}</div><div class="label">总集数</div></div>
+      </div>
+      <div class="profile-menu">
+        <div class="menu-item" onclick="app.toast('功能开发中')">
+          <span class="menu-icon">⬇️</span><span class="menu-text">我的下载</span><span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-item" onclick="app.toast('功能开发中')">
+          <span class="menu-icon">🎁</span><span class="menu-text">福利中心</span><span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-item" onclick="app.toast('功能开发中')">
+          <span class="menu-icon">⚙️</span><span class="menu-text">设置</span><span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-item" onclick="app.clearData()">
+          <span class="menu-icon">🗑️</span><span class="menu-text">清除数据</span><span class="menu-arrow">›</span>
+        </div>
+      </div>
+    `;
+  }
+
+  clearData(){
+    if(!confirm('确定要清除所有观看记录和收藏吗？'))return;
+    localStorage.removeItem('reddrama_history');
+    localStorage.removeItem('reddrama_favorites');
+    localStorage.removeItem('reddrama_progress');
+    this.history=[];this.favorites=[];this.progress={};
+    this.toast('数据已清除');
+    this.renderBookshelf();
+    this.renderProfile();
+  }
+
+  // ===== SHARE =====
+  showShare(){document.getElementById('share-modal').classList.add('show')}
+  closeShare(e){if(!e||e.target.id==='share-modal')document.getElementById('share-modal').classList.remove('show')}
+  shareTo(type){
+    const url=type==='copy'?location.href:'https://englishapp.pages.dev';
+    if(type==='copy'){
+      if(navigator.clipboard){navigator.clipboard.writeText(url).then(()=>this.toast('链接已复制'))}
+      else{this.toast('请手动复制链接')}
+    }else{
+      this.toast('请在浏览器中点击右上角分享');
+    }
+    this.closeShare();
+  }
+}
+
+// ===== INIT =====
+const app=new RedDramaApp();
+</script>
+</body>
+</html>
