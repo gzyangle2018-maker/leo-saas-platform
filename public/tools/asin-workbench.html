@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon运营中台 - ASIN工作台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', 'Microsoft YaHei', sans-serif; }
+    .sidebar-item { transition: all 0.2s ease; }
+    .sidebar-item:hover, .sidebar-item.active {
+      background: rgba(59, 130, 246, 0.1); color: #2563eb; border-right: 3px solid #2563eb;
+    }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .asin-row { transition: all 0.15s; }
+    .asin-row:hover { background: #f8fafc; }
+    .tab-btn { transition: all 0.2s; border-bottom: 2px solid transparent; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+  </style>
+  <script src="/js/api.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-50 transition-transform duration-300">
+    <div class="flex items-center justify-between p-5 border-b border-gray-100">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
+          <i class="fas fa-cube text-white text-sm"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-gray-900 text-sm">Amazon运营中台</h1>
+          <p class="text-xs text-gray-500">Operations Hub</p>
+        </div>
+      </div>
+      <button id="sidebarToggle" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    </div>
+    <nav class="py-4 overflow-y-auto h-[calc(100%-80px)] scrollbar-hide">
+      <div class="px-4 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">核心模块</div>
+      <a href="index.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-chart-pie w-5 text-center"></i><span>Dashboard</span></a>
+      <a href="knowledge-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-book w-5 text-center"></i><span>知识库</span></a>
+      <a href="asin-workbench.html" class="sidebar-item active flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-barcode w-5 text-center"></i><span>ASIN工作台</span></a>
+      <a href="task-hub.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-tasks w-5 text-center"></i><span>任务中心</span><span id="taskBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">智能运营</div>
+      <a href="agent-workbench.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-robot w-5 text-center"></i><span>Agent工作台</span><span class="ml-auto bg-purple-100 text-purple-600 text-xs px-2 py-0.5 rounded">AI</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">流程管理</div>
+      <a href="approval-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-check-circle w-5 text-center"></i><span>审批中心</span><span id="approvalBadge" class="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="exception-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-exclamation-triangle w-5 text-center"></i><span>异常中心</span><span id="exceptionBadge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span></a>
+      <a href="review-center.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-history w-5 text-center"></i><span>复盘中心</span></a>
+      <div class="px-4 mt-6 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">系统</div>
+      <a href="settings.html" class="sidebar-item flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700"><i class="fas fa-cog w-5 text-center"></i><span>系统设置</span></a>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="flex items-center justify-between px-6 py-3">
+        <div class="flex items-center gap-4">
+          <button id="mobileMenuBtn" class="lg:hidden text-gray-500 hover:text-gray-700"><i class="fas fa-bars text-lg"></i></button>
+          <h2 class="text-lg font-semibold text-gray-800">ASIN工作台</h2>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden md:block">
+            <input type="text" id="globalSearch" placeholder="搜索 ASIN..." class="w-64 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          </div>
+          <button class="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"><i class="fas fa-bell"></i><span id="notifBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span></button>
+          <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
+            <div class="text-right hidden sm:block">
+              <p class="text-sm font-medium text-gray-800">运营管理员</p>
+              <p class="text-xs text-gray-500">admin@amazon.com</p>
+            </div>
+            <div class="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">A</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="p-6">
+      <!-- Toolbar -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input type="text" id="asinSearch" placeholder="搜索 ASIN 或标题..." class="w-72 pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+          </div>
+          <select id="marketplaceFilter" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="all">全部站点</option>
+            <option value="US">美国站</option>
+            <option value="CA">加拿大站</option>
+            <option value="UK">英国站</option>
+            <option value="DE">德国站</option>
+            <option value="JP">日本站</option>
+          </select>
+        </div>
+        <button onclick="openModal('addAsinModal')" class="px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors">
+          <i class="fas fa-plus mr-2"></i>添加ASIN
+        </button>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">总ASIN数</p>
+          <h4 class="text-xl font-bold text-gray-800" id="totalAsins">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">今日总销售</p>
+          <h4 class="text-xl font-bold text-gray-800" id="totalSales">$0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">平均ACoS</p>
+          <h4 class="text-xl font-bold text-gray-800" id="avgAcos">0%</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">总订单数</p>
+          <h4 class="text-xl font-bold text-gray-800" id="totalOrders">0</h4>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-200 p-4 card-hover">
+          <p class="text-xs text-gray-500 mb-1">异常ASIN</p>
+          <h4 class="text-xl font-bold text-red-600" id="exceptionAsins">0</h4>
+        </div>
+      </div>
+
+      <!-- ASIN Table -->
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden card-hover">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">ASIN</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">产品标题</th>
+                <th class="px-4 py-3 text-left font-medium text-gray-600">站点</th>
+                <th class="px-4 py-3 text-right font-medium text-gray-600">销售额</th>
+                <th class="px-4 py-3 text-right font-medium text-gray-600">订单</th>
+                <th class="px-4 py-3 text-right font-medium text-gray-600">ACoS</th>
+                <th class="px-4 py-3 text-center font-medium text-gray-600">评分</th>
+                <th class="px-4 py-3 text-center font-medium text-gray-600">状态</th>
+                <th class="px-4 py-3 text-center font-medium text-gray-600">操作</th>
+              </tr>
+            </thead>
+            <tbody id="asinTableBody">
+              <!-- Rows rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer class="border-t border-gray-200 py-4 px-6 mt-8">
+      <p class="text-center text-xs text-gray-400">Amazon运营中台 v1.0 | 数据仅供参考，请以卖家后台为准</p>
+    </footer>
+  </main>
+
+  <!-- Add ASIN Modal -->
+  <div id="addAsinModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-lg mx-4">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <h3 class="font-semibold text-gray-800">添加ASIN</h3>
+        <button onclick="closeModal('addAsinModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">ASIN</label>
+          <input type="text" id="newAsinCode" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" placeholder="B08XXXXXXX">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">产品标题</label>
+          <input type="text" id="newAsinTitle" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入产品标题">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">站点</label>
+            <select id="newAsinMarket" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="US">美国站</option><option value="CA">加拿大站</option><option value="UK">英国站</option><option value="DE">德国站</option><option value="JP">日本站</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <select id="newAsinStatus" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="active">在售</option><option value="inactive">停售</option><option value="draft">草稿</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">日销售额 ($)</label>
+            <input type="number" id="newAsinSales" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">日订单</label>
+            <input type="number" id="newAsinOrders" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">ACoS (%)</label>
+            <input type="number" id="newAsinAcos" class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 p-5 border-t border-gray-100">
+        <button onclick="closeModal('addAsinModal')" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+        <button onclick="saveAsin()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASIN Detail Modal -->
+  <div id="asinDetailModal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between p-5 border-b border-gray-100">
+        <div>
+          <h3 class="font-semibold text-gray-800" id="detailTitle"></h3>
+          <p class="text-xs text-gray-500" id="detailAsin"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="deleteCurrentAsin()" class="p-2 text-red-500 hover:bg-red-50 rounded-lg"><i class="fas fa-trash"></i></button>
+          <button onclick="closeModal('asinDetailModal')" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="p-5">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-blue-50 rounded-xl p-4">
+            <p class="text-xs text-blue-600 mb-1">销售额</p>
+            <h4 class="text-xl font-bold text-blue-800" id="detailSales"></h4>
+          </div>
+          <div class="bg-green-50 rounded-xl p-4">
+            <p class="text-xs text-green-600 mb-1">订单数</p>
+            <h4 class="text-xl font-bold text-green-800" id="detailOrders"></h4>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-4">
+            <p class="text-xs text-orange-600 mb-1">ACoS</p>
+            <h4 class="text-xl font-bold text-orange-800" id="detailAcos"></h4>
+          </div>
+          <div class="bg-purple-50 rounded-xl p-4">
+            <p class="text-xs text-purple-600 mb-1">评分</p>
+            <h4 class="text-xl font-bold text-purple-800" id="detailRating"></h4>
+          </div>
+        </div>
+        <div class="mb-6">
+          <h4 class="font-medium text-gray-800 mb-3">销售趋势 (7天)</h4>
+          <canvas id="asinChart" height="80"></canvas>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-gray-50 rounded-xl p-4">
+            <h4 class="font-medium text-gray-800 mb-3">优化建议</h4>
+            <div id="detailSuggestions" class="space-y-2"></div>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-4">
+            <h4 class="font-medium text-gray-800 mb-3">相关任务</h4>
+            <div id="detailTasks" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    requireAuth();
+    let asins = [];
+    let currentAsinId = null;
+    let asinChart = null;
+
+    async function loadData() {
+      try {
+        const res = await OpsAPI.list('asins');
+        asins = res.data || [];
+        renderTable();
+      } catch (e) {
+        console.error('Failed to load ASINs', e);
+      }
+    }
+
+    const statusMap = {
+      active: { label: '在售', class: 'bg-green-100 text-green-700' },
+      inactive: { label: '停售', class: 'bg-gray-100 text-gray-600' },
+      draft: { label: '草稿', class: 'bg-yellow-100 text-yellow-700' }
+    };
+
+    // ===================== RENDER =====================
+    function renderTable() {
+      const tbody = document.getElementById('asinTableBody');
+      const search = document.getElementById('asinSearch')?.value.toLowerCase() || '';
+      const market = document.getElementById('marketplaceFilter')?.value || 'all';
+
+      let filtered = asins;
+      if (search) filtered = filtered.filter(a => (a.asin+a.title).toLowerCase().includes(search));
+      if (market !== 'all') filtered = filtered.filter(a => a.market === market);
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-gray-400 py-8">暂无ASIN数据</td></tr>';
+      } else {
+        tbody.innerHTML = filtered.map(a => {
+          const s = statusMap[a.status] || statusMap.draft;
+          return `
+            <tr class="asin-row border-b border-gray-100 cursor-pointer" onclick="viewAsin(${a.id})">
+              <td class="px-4 py-3 font-mono text-sm text-blue-600">${a.asin}</td>
+              <td class="px-4 py-3 text-sm text-gray-800 max-w-[200px] truncate">${a.title||'未命名'}</td>
+              <td class="px-4 py-3 text-sm text-gray-600">${a.market||'US'}</td>
+              <td class="px-4 py-3 text-sm text-right font-medium">$${(a.sales||0).toLocaleString()}</td>
+              <td class="px-4 py-3 text-sm text-right">${a.orders||0}</td>
+              <td class="px-4 py-3 text-sm text-right ${(a.acos||0)>30?'text-red-600':'text-gray-600'}">${a.acos||0}%</td>
+              <td class="px-4 py-3 text-center"><span class="text-yellow-500"><i class="fas fa-star text-xs"></i> ${a.rating||'-'}</span></td>
+              <td class="px-4 py-3 text-center"><span class="status-badge ${s.class}">${s.label}</span></td>
+              <td class="px-4 py-3 text-center">
+                <button onclick="event.stopPropagation(); viewAsin(${a.id})" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><i class="fas fa-eye"></i></button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('totalAsins').textContent = asins.length;
+      document.getElementById('totalSales').textContent = '$' + Math.round(asins.reduce((s,a)=>s+(a.sales||0),0)).toLocaleString();
+      document.getElementById('totalOrders').textContent = asins.reduce((s,a)=>s+(a.orders||0),0).toLocaleString();
+      const avgAcos = asins.length ? (asins.reduce((s,a)=>s+(a.acos||0),0)/asins.length).toFixed(1) : 0;
+      document.getElementById('avgAcos').textContent = avgAcos + '%';
+      document.getElementById('exceptionAsins').textContent = asins.filter(a=>(a.acos||0)>30 || (a.rating||5)<3.5).length;
+    }
+
+    // ===================== ACTIONS =====================
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+
+    async function saveAsin() {
+      const asin_code = document.getElementById('newAsinCode').value.trim().toUpperCase();
+      const title = document.getElementById('newAsinTitle').value.trim();
+      if (!asin_code || !title) { alert('请填写ASIN和标题'); return; }
+      await OpsAPI.create('asins', {
+        asin_code,
+        title,
+        market: document.getElementById('newAsinMarket').value,
+        status: document.getElementById('newAsinStatus').value,
+        sales: parseFloat(document.getElementById('newAsinSales').value)||0,
+        orders: parseInt(document.getElementById('newAsinOrders').value)||0,
+        acos: parseFloat(document.getElementById('newAsinAcos').value)||0,
+        rating: 4.5
+      });
+      await loadData();
+      closeModal('addAsinModal');
+      document.getElementById('newAsinCode').value=''; document.getElementById('newAsinTitle').value='';
+      document.getElementById('newAsinSales').value=''; document.getElementById('newAsinOrders').value=''; document.getElementById('newAsinAcos').value='';
+    }
+
+    async function viewAsin(id) {
+      const a = asins.find(x=>x.id===id); if(!a) return;
+      currentAsinId = id;
+      document.getElementById('detailTitle').textContent = a.title;
+      document.getElementById('detailAsin').textContent = `${a.asin} | ${a.market||'US'} | ${statusMap[a.status]?.label||a.status}`;
+      document.getElementById('detailSales').textContent = '$' + (a.sales||0).toLocaleString();
+      document.getElementById('detailOrders').textContent = (a.orders||0).toLocaleString();
+      document.getElementById('detailAcos').textContent = (a.acos||0) + '%';
+      document.getElementById('detailRating').textContent = (a.rating||'-') + ' / 5';
+
+      // Suggestions
+      const suggestions = [];
+      if ((a.acos||0) > 30) suggestions.push('<div class="flex items-center gap-2 text-sm text-red-600"><i class="fas fa-exclamation-circle"></i><span>ACoS过高，建议优化广告关键词</span></div>');
+      if ((a.rating||5) < 4) suggestions.push('<div class="flex items-center gap-2 text-sm text-orange-600"><i class="fas fa-star-half-alt"></i><span>评分偏低，建议分析差评原因</span></div>');
+      if ((a.orders||0) < 10) suggestions.push('<div class="flex items-center gap-2 text-sm text-blue-600"><i class="fas fa-chart-line"></i><span>销量较低，建议加大广告投放</span></div>');
+      if (suggestions.length === 0) suggestions.push('<div class="text-sm text-gray-500">暂无优化建议，表现良好</div>');
+      document.getElementById('detailSuggestions').innerHTML = suggestions.join('');
+
+      // Related tasks
+      try {
+        const taskRes = await OpsAPI.list('tasks');
+        const tasks = (taskRes.data || []).filter(t=>t.title?.includes(a.asin)).slice(0,3);
+        document.getElementById('detailTasks').innerHTML = tasks.length
+          ? tasks.map(t=>`<div class="flex items-center justify-between text-sm"><span class="text-gray-700">${t.title}</span><span class="text-xs px-2 py-0.5 rounded ${t.status==='pending'?'bg-yellow-100 text-yellow-700':'bg-green-100 text-green-700'}">${t.status==='pending'?'待办':'已完成'}</span></div>`).join('')
+          : '<div class="text-sm text-gray-500">暂无相关任务</div>';
+      } catch (e) {
+        document.getElementById('detailTasks').innerHTML = '<div class="text-sm text-gray-500">暂无相关任务</div>';
+      }
+
+      openModal('asinDetailModal');
+      setTimeout(() => renderAsinChart(), 100);
+    }
+
+    async function deleteCurrentAsin() {
+      if (!confirm('确定删除此ASIN？')) return;
+      await OpsAPI.remove('asins', currentAsinId);
+      await loadData();
+      closeModal('asinDetailModal');
+    }
+
+    function renderAsinChart() {
+      const ctx = document.getElementById('asinChart');
+      if (!ctx) return;
+      if (asinChart) asinChart.destroy();
+      asinChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['4/24','4/25','4/26','4/27','4/28','4/29','4/30'],
+          datasets: [{
+            label: '销售额', data: Array.from({length:7},()=>Math.floor(Math.random()*500+800)),
+            borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 3
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } } }
+      });
+    }
+
+    // ===================== EVENTS =====================
+    document.getElementById('asinSearch')?.addEventListener('input', renderTable);
+    document.getElementById('marketplaceFilter')?.addEventListener('change', renderTable);
+
+    // ===================== MOBILE SIDEBAR =====================
+    function initSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      document.getElementById('sidebarToggle')?.addEventListener('click', () => sidebar.classList.add('-translate-x-full'));
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', () => sidebar.classList.remove('-translate-x-full'));
+      document.addEventListener('click', e => { if (window.innerWidth<1024 && !sidebar.contains(e.target) && !document.getElementById('mobileMenuBtn')?.contains(e.target)) sidebar.classList.add('-translate-x-full'); });
+      if (window.innerWidth<1024) sidebar.classList.add('-translate-x-full');
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', () => { loadData(); initSidebar(); updateBadges(); });
+  </script>
+</body>
+</html>
