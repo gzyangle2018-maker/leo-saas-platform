@@ -1,0 +1,12 @@
+name = "ai-dispatcher-proxy"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# 环境变量（部署后通过 wrangler secret 设置，不要在代码中硬写 Key）
+[vars]
+API_BASE_URL = "https://api.openai.com/v1"
+
+# 密钥（部署后设置）
+# wrangler secret put API_KEY
+# wrangler secret put KLING_API_KEY
+# wrangler secret put KLING_API_BASE_URL
